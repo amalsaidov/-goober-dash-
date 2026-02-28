@@ -1,0 +1,14 @@
+using UnityEngine;
+
+/// <summary>
+/// Placed in trigger zones below major gaps.
+/// Instantly respawns any player or bot that enters the trigger.
+/// </summary>
+public class KillZone : MonoBehaviour
+{
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        var rp = other.GetComponent<RacePlayer>();
+        if (rp != null) rp.Respawn();
+    }
+}
