@@ -1,0 +1,96 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <Style src="../USS/theme.uss" />
+
+  <ui:VisualElement style="align-items:center; justify-content:center; flex:1; padding:40px;">
+
+    <ui:Label class="title" text="SETTINGS" style="font-size:60px; margin-bottom:6px;" />
+    <ui:Label class="subtitle" text="Customize your experience" style="margin-bottom:32px;" />
+
+    <!-- Cards grid -->
+    <ui:VisualElement style="flex-direction:row; flex-wrap:wrap; justify-content:center; max-width:900px;">
+
+      <!-- DISPLAY -->
+      <ui:VisualElement class="card" style="min-width:380px;">
+        <ui:Label class="label-pri" text="DISPLAY" style="margin-bottom:16px;
+                  color:rgba(0,219,245,1);" />
+        <ui:VisualElement class="setting-row">
+          <ui:Label class="setting-row__label" text="Quality" />
+          <ui:VisualElement class="toggle-group">
+            <ui:Button name="q-low"    class="toggle-btn" text="Low" />
+            <ui:Button name="q-med"    class="toggle-btn toggle-btn--active" text="Med" />
+            <ui:Button name="q-high"   class="toggle-btn" text="High" />
+            <ui:Button name="q-ultra"  class="toggle-btn" text="Ultra" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="setting-row">
+          <ui:Label class="setting-row__label" text="Theme" />
+          <ui:VisualElement class="toggle-group">
+            <ui:Button name="t-std"    class="toggle-btn toggle-btn--active" text="Color" />
+            <ui:Button name="t-bw"     class="toggle-btn" text="B&amp;W" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <!-- GAMEPLAY -->
+      <ui:VisualElement class="card" style="min-width:380px;">
+        <ui:Label class="label-pri" text="GAMEPLAY" style="margin-bottom:16px;
+                  color:rgba(255,199,20,1);" />
+        <ui:VisualElement class="setting-row">
+          <ui:Label class="setting-row__label" text="Round Time" />
+          <ui:VisualElement class="toggle-group">
+            <ui:Button name="rt-45"  class="toggle-btn" text="45s" />
+            <ui:Button name="rt-60"  class="toggle-btn" text="60s" />
+            <ui:Button name="rt-75"  class="toggle-btn toggle-btn--active" text="75s" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="setting-row">
+          <ui:Label class="setting-row__label" text="Eliminate / Round" />
+          <ui:VisualElement class="toggle-group">
+            <ui:Button name="el-1"  class="toggle-btn" text="1" />
+            <ui:Button name="el-2"  class="toggle-btn toggle-btn--active" text="2" />
+            <ui:Button name="el-3"  class="toggle-btn" text="3" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <!-- EXPERIENCE -->
+      <ui:VisualElement class="card" style="min-width:380px;">
+        <ui:Label class="label-pri" text="EXPERIENCE" style="margin-bottom:16px;
+                  color:rgba(25,242,133,1);" />
+        <ui:VisualElement class="setting-row">
+          <ui:Label class="setting-row__label" text="Camera Shake" />
+          <ui:VisualElement class="toggle-group">
+            <ui:Button name="sh-on"  class="toggle-btn toggle-btn--active" text="ON" />
+            <ui:Button name="sh-off" class="toggle-btn" text="OFF" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="setting-row">
+          <ui:Label class="setting-row__label" text="Trails" />
+          <ui:VisualElement class="toggle-group">
+            <ui:Button name="tr-on"  class="toggle-btn toggle-btn--active" text="ON" />
+            <ui:Button name="tr-off" class="toggle-btn" text="OFF" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="setting-row">
+          <ui:Label class="setting-row__label" text="Language" />
+          <ui:VisualElement class="toggle-group">
+            <ui:Button name="l-en"  class="toggle-btn toggle-btn--active" text="EN" />
+            <ui:Button name="l-ru"  class="toggle-btn" text="RU" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <!-- PERSONALIZE -->
+      <ui:VisualElement class="card" style="min-width:380px;">
+        <ui:Label class="label-pri" text="YOUR COLOR" style="margin-bottom:12px;
+                  color:rgba(255,138,15,1);" />
+        <ui:VisualElement name="swatch-row" class="swatch-row" />
+      </ui:VisualElement>
+
+    </ui:VisualElement>
+
+    <ui:Button name="btn-back" class="btn btn--ghost"
+               text="BACK" style="margin-top:28px; min-width:180px;" />
+
+  </ui:VisualElement>
+</ui:UXML>

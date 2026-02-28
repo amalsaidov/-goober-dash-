@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <Style src="../USS/theme.uss" />
+
+  <ui:VisualElement style="align-items:center; justify-content:center; flex:1;">
+    <ui:Label name="end-title" class="title" text="YOU WIN!" style="font-size:80px;" />
+    <ui:Label name="end-sub"   class="subtitle"
+              text="You beat everyone!" style="font-size:26px; margin-bottom:48px;" />
+
+    <ui:Button name="btn-again" class="btn btn--gold"  text="PLAY AGAIN" />
+    <ui:Button name="btn-menu"  class="btn btn--ghost" text="MAIN MENU" />
+  </ui:VisualElement>
+</ui:UXML>

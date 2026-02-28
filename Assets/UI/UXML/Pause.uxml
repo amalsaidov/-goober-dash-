@@ -1,0 +1,18 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <Style src="../USS/theme.uss" />
+
+  <ui:VisualElement style="position:absolute; left:0; top:0; right:0; bottom:0;
+                            background-color:rgba(0,0,0,0.7);
+                            align-items:center; justify-content:center;">
+
+    <ui:VisualElement class="card" style="align-items:center; min-width:360px; padding:40px 48px;">
+      <ui:Label text="⏸" style="font-size:64px; color:rgba(255,199,20,1); margin-bottom:8px;" />
+      <ui:Label class="title" text="PAUSED" style="font-size:56px; margin-bottom:32px;" />
+
+      <ui:Button name="btn-resume"  class="btn btn--gold"    text="RESUME" />
+      <ui:Button name="btn-restart" class="btn btn--primary" text="RESTART" />
+      <ui:Button name="btn-menu"    class="btn btn--ghost"   text="MAIN MENU" />
+    </ui:VisualElement>
+
+  </ui:VisualElement>
+</ui:UXML>

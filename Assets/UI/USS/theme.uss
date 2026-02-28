@@ -1,0 +1,273 @@
+/* ═══════════════════════════════════════════════════════════════
+   GOOBER DASH — Design System
+   Edit visually: Window → UI Toolkit → UI Builder
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Root ─────────────────────────────────────────────────────── */
+:root {
+    --bg-deep:   rgba(0, 5, 15, 0.98);
+    --bg-card:   rgba(13, 23, 51, 1);
+    --bg-raise:  rgba(20, 36, 77, 1);
+    --accent:    rgba(51, 148, 255, 1);
+    --cyan:      rgba(0, 219, 245, 1);
+    --gold:      rgba(255, 199, 20, 1);
+    --green:     rgba(25, 242, 133, 1);
+    --red:       rgba(255, 56, 87, 1);
+    --orange:    rgba(255, 138, 15, 1);
+    --text-pri:  rgba(235, 247, 255, 1);
+    --text-sec:  rgba(107, 148, 204, 1);
+    --text-dim:  rgba(46, 66, 107, 1);
+}
+
+/* ── Full-screen panel base ───────────────────────────────────── */
+.panel {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 5, 15, 0.98);
+    display: none;
+}
+
+.panel--visible {
+    display: flex;
+}
+
+/* ── Card ─────────────────────────────────────────────────────── */
+.card {
+    background-color: rgba(13, 23, 51, 1);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin: 8px;
+    border-width: 1px;
+    border-color: rgba(51, 148, 255, 0.18);
+}
+
+.card--raised {
+    background-color: rgba(20, 36, 77, 1);
+}
+
+/* ── Typography ───────────────────────────────────────────────── */
+.title {
+    font-size: 96px;
+    color: rgba(255, 199, 20, 1);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 4px;
+}
+
+.subtitle {
+    font-size: 22px;
+    color: rgba(107, 148, 204, 1);
+    -unity-text-align: middle-center;
+    margin-top: 8px;
+}
+
+.label-pri {
+    font-size: 20px;
+    color: rgba(235, 247, 255, 1);
+    -unity-font-style: bold;
+}
+
+.label-sec {
+    font-size: 16px;
+    color: rgba(107, 148, 204, 1);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn {
+    height: 64px;
+    min-width: 260px;
+    border-radius: 12px;
+    border-width: 0;
+    font-size: 22px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin: 8px 0;
+    cursor: link;
+    transition-duration: 0.12s;
+}
+
+.btn--primary {
+    background-color: rgba(51, 148, 255, 1);
+    color: rgba(235, 247, 255, 1);
+}
+
+.btn--primary:hover {
+    background-color: rgba(80, 168, 255, 1);
+    scale: 1.03 1.03;
+}
+
+.btn--primary:active {
+    background-color: rgba(30, 120, 230, 1);
+    scale: 0.97 0.97;
+}
+
+.btn--gold {
+    background-color: rgba(255, 199, 20, 1);
+    color: rgba(10, 10, 20, 1);
+}
+
+.btn--gold:hover {
+    background-color: rgba(255, 215, 60, 1);
+    scale: 1.03 1.03;
+}
+
+.btn--danger {
+    background-color: rgba(255, 56, 87, 1);
+    color: rgba(235, 247, 255, 1);
+}
+
+.btn--ghost {
+    background-color: rgba(20, 36, 77, 1);
+    color: rgba(107, 148, 204, 1);
+    border-width: 1px;
+    border-color: rgba(51, 148, 255, 0.30);
+}
+
+.btn--ghost:hover {
+    background-color: rgba(30, 50, 100, 1);
+    color: rgba(235, 247, 255, 1);
+}
+
+/* ── HUD Chips ────────────────────────────────────────────────── */
+.hud-chip {
+    position: absolute;
+    height: 46px;
+    min-width: 110px;
+    background-color: rgba(5, 10, 31, 0.85);
+    border-radius: 8px;
+    border-left-width: 4px;
+    padding: 0 14px 0 14px;
+    align-items: center;
+    justify-content: center;
+}
+
+.hud-chip__label {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgba(235, 247, 255, 1);
+}
+
+.hud-chip--players { border-left-color: rgba(0, 219, 245, 1); top: 14px; left: 14px; }
+.hud-chip--round   { border-left-color: rgba(255, 199, 20, 1); top: 14px; left: 50%; translate: -50% 0; }
+.hud-chip--timer   { border-left-color: rgba(51, 148, 255, 1); top: 14px; right: 14px; }
+.hud-chip--pos     { border-left-color: rgba(25, 242, 133, 1); top: 68px; right: 14px; }
+
+/* ── Difficulty Cards ─────────────────────────────────────────── */
+.diff-card {
+    width: 280px;
+    height: 180px;
+    border-radius: 16px;
+    margin: 10px;
+    padding: 24px;
+    border-width: 2px;
+    cursor: link;
+    transition-duration: 0.12s;
+}
+
+.diff-card:hover  { scale: 1.04 1.04; }
+.diff-card:active { scale: 0.97 0.97; }
+
+.diff-card--easy   { background-color: rgba(15, 60, 30, 1);  border-color: rgba(25, 242, 133, 1); }
+.diff-card--normal { background-color: rgba(10, 30, 70, 1);  border-color: rgba(51, 148, 255, 1); }
+.diff-card--hard   { background-color: rgba(70, 30, 10, 1);  border-color: rgba(255, 138, 15, 1); }
+.diff-card--ultra  { background-color: rgba(70, 10, 15, 1);  border-color: rgba(255, 56, 87, 1);  }
+
+.diff-card__title { font-size: 32px; -unity-font-style: bold; margin-bottom: 8px; }
+.diff-card__desc  { font-size: 15px; color: rgba(107, 148, 204, 1); white-space: normal; }
+
+/* ── Settings Toggle ──────────────────────────────────────────── */
+.setting-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin: 10px 0;
+}
+
+.setting-row__label {
+    font-size: 18px;
+    color: rgba(235, 247, 255, 1);
+}
+
+.toggle-group {
+    flex-direction: row;
+}
+
+.toggle-btn {
+    width: 80px;
+    height: 36px;
+    border-radius: 6px;
+    border-width: 0;
+    font-size: 15px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-left: 4px;
+    cursor: link;
+    background-color: rgba(20, 36, 77, 1);
+    color: rgba(107, 148, 204, 1);
+}
+
+.toggle-btn--active {
+    background-color: rgba(51, 148, 255, 1);
+    color: rgba(235, 247, 255, 1);
+}
+
+/* ── Color Swatches ───────────────────────────────────────────── */
+.swatch-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    margin: 4px;
+    border-width: 2px;
+    border-color: transparent;
+    cursor: link;
+    transition-duration: 0.1s;
+}
+
+.swatch:hover  { scale: 1.15 1.15; }
+.swatch--selected { border-color: rgba(235, 247, 255, 1); scale: 1.2 1.2; }
+
+/* ── Countdown overlay ────────────────────────────────────────── */
+.countdown-overlay {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 10, 0.72);
+    display: none;
+}
+
+.countdown-overlay--visible { display: flex; }
+
+.countdown-number {
+    font-size: 160px;
+    -unity-font-style: bold;
+    color: rgba(235, 247, 255, 1);
+    -unity-text-align: middle-center;
+}
+
+.countdown-number--go { color: rgba(25, 242, 133, 1); }
+
+/* ── Message banner ───────────────────────────────────────────── */
+.message-banner {
+    position: absolute;
+    left: 50%;
+    top: 120px;
+    translate: -50% 0;
+    background-color: rgba(13, 23, 51, 0.92);
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: rgba(51, 148, 255, 0.4);
+    padding: 14px 32px;
+    display: none;
+}
+
+.message-banner--visible { display: flex; }
+.message-banner__text { font-size: 24px; -unity-font-style: bold; -unity-text-align: middle-center; }

@@ -1,0 +1,58 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <Style src="../USS/theme.uss" />
+
+  <ui:VisualElement style="align-items:center; justify-content:center; flex:1; padding:40px;">
+
+    <ui:Label class="title" text="LOBBY" style="font-size:64px; margin-bottom:6px;" />
+    <ui:Label class="subtitle" text="LAN Multiplayer" style="margin-bottom:32px;" />
+
+    <!-- Connect View -->
+    <ui:VisualElement name="connect-view" class="card" style="align-items:center; min-width:440px;">
+      <ui:Label class="label-pri" text="YOUR NICKNAME" style="margin-bottom:10px;" />
+      <ui:TextField name="nickname-field" style="width:320px; height:48px; font-size:20px;
+                    background-color:rgba(20,36,77,1); border-radius:8px;
+                    border-color:rgba(51,148,255,0.4); color:rgba(235,247,255,1);
+                    padding:0 12px; margin-bottom:24px;" />
+
+      <ui:Button name="btn-host" class="btn btn--gold"    text="HOST" />
+      <ui:Button name="btn-join" class="btn btn--primary" text="JOIN" />
+      <ui:Button name="btn-back" class="btn btn--ghost"   text="BACK" />
+    </ui:VisualElement>
+
+    <!-- Room View (shown after host/join) -->
+    <ui:VisualElement name="room-view" class="card"
+                      style="align-items:center; min-width:500px; display:none;">
+
+      <!-- IP display (host only) -->
+      <ui:VisualElement name="host-section" style="align-items:center; margin-bottom:20px;">
+        <ui:Label class="label-sec" text="SHARE THIS IP" />
+        <ui:Label name="ip-label" class="label-pri"
+                  text="192.168.1.x" style="font-size:28px; color:rgba(0,219,245,1);" />
+      </ui:VisualElement>
+
+      <!-- Client waiting text -->
+      <ui:Label name="client-wait" class="label-sec"
+                text="Waiting for host to start…"
+                style="display:none; margin-bottom:20px; font-size:18px;" />
+
+      <!-- Player list -->
+      <ui:ScrollView name="player-list"
+                     style="width:420px; max-height:240px; margin-bottom:20px;" />
+
+      <!-- Bots toggle (host only) -->
+      <ui:VisualElement name="bots-section" class="setting-row"
+                        style="width:420px; margin-bottom:16px;">
+        <ui:Label class="setting-row__label" text="Bots" />
+        <ui:VisualElement class="toggle-group">
+          <ui:Button name="btn-bots-toggle" class="btn btn--ghost"
+                     text="ON" style="min-width:80px; height:40px; font-size:16px;" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+
+      <ui:Button name="btn-start" class="btn btn--gold"    text="START" />
+      <ui:Button name="btn-leave" class="btn btn--danger"  text="LEAVE"
+                 style="min-width:180px;" />
+    </ui:VisualElement>
+
+  </ui:VisualElement>
+</ui:UXML>

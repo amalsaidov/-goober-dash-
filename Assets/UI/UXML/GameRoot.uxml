@@ -1,0 +1,49 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements"
+    xsi="http://www.w3.org/2001/XMLSchema-instance"
+    engine="UnityEngine.UIElements"
+    noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd">
+
+  <ui:Template name="MainMenu"   src="MainMenu.uxml" />
+  <ui:Template name="Difficulty" src="Difficulty.uxml" />
+  <ui:Template name="Settings"   src="Settings.uxml" />
+  <ui:Template name="Lobby"      src="Lobby.uxml" />
+  <ui:Template name="Pause"      src="Pause.uxml" />
+  <ui:Template name="End"        src="End.uxml" />
+
+  <Style src="../USS/theme.uss" />
+
+  <!-- HUD — always on top, hidden until race starts -->
+  <ui:VisualElement name="HUDLayer" style="position:absolute; left:0; top:0; right:0; bottom:0; display:none;">
+    <ui:VisualElement name="chip-players" class="hud-chip hud-chip--players">
+      <ui:Label name="hud-players" class="hud-chip__label" text="Players: 8" />
+    </ui:VisualElement>
+    <ui:VisualElement name="chip-round" class="hud-chip hud-chip--round">
+      <ui:Label name="hud-round" class="hud-chip__label" text="Round 1" />
+    </ui:VisualElement>
+    <ui:VisualElement name="chip-timer" class="hud-chip hud-chip--timer">
+      <ui:Label name="hud-timer" class="hud-chip__label" text="75s" />
+    </ui:VisualElement>
+    <ui:VisualElement name="chip-pos" class="hud-chip hud-chip--pos">
+      <ui:Label name="hud-pos" class="hud-chip__label" text="1st" />
+    </ui:VisualElement>
+  </ui:VisualElement>
+
+  <!-- Panels — only one visible at a time -->
+  <ui:Instance template="MainMenu"   name="MainMenuPanel"   class="panel" />
+  <ui:Instance template="Difficulty" name="DifficultyPanel" class="panel" />
+  <ui:Instance template="Settings"   name="SettingsPanel"   class="panel" />
+  <ui:Instance template="Lobby"      name="LobbyPanel"      class="panel" />
+  <ui:Instance template="Pause"      name="PausePanel"      class="panel" />
+  <ui:Instance template="End"        name="EndPanel"        class="panel" />
+
+  <!-- Countdown — float above everything -->
+  <ui:VisualElement name="CountdownOverlay" class="countdown-overlay">
+    <ui:Label name="countdown-number" class="countdown-number" text="3" />
+  </ui:VisualElement>
+
+  <!-- Message banner -->
+  <ui:VisualElement name="MessageBanner" class="message-banner">
+    <ui:Label name="message-text" class="message-banner__text" text="" />
+  </ui:VisualElement>
+
+</ui:UXML>
