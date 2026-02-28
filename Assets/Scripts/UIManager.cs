@@ -207,6 +207,9 @@ public class UIManager : MonoBehaviour
     public virtual void ShowHUD() { }
     public virtual void HideHUD() { }
 
+    // ── Misc (overridden by UIToolkitManager) ──────────────────────────────
+    public virtual void OnSplashDismissed() { }
+
     // ── Lobby (overridden by UIToolkitManager) ─────────────────────────────
     public virtual void RefreshLobby(int playerCount, bool botsOn, bool isHost) { }
     public virtual void RefreshLobbyPlayers() { }

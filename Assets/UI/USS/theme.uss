@@ -120,7 +120,6 @@
     -unity-text-outline-color: rgba(110, 65, 0, 0.70);
     letter-spacing: 3px;
     margin-bottom: 8px;
-    line-height: 1.0;
 }
 
 .mm-sub {
@@ -186,7 +185,7 @@
     -unity-text-align: middle-center;
     letter-spacing: 4px;
     margin: 5px 0;
-    cursor: link;
+
     padding: 0 36px;
     transition-property: background-color, scale;
     transition-duration: 0.1s;
@@ -317,7 +316,7 @@
     margin: 8px;
     padding: 26px 28px;
     border-width: 1px;
-    cursor: link;
+
     align-items: flex-start;
     justify-content: space-between;
     transition-property: scale, border-color;
@@ -453,7 +452,7 @@
     letter-spacing: 2px;
     -unity-text-align: middle-center;
     margin-left: 4px;
-    cursor: link;
+
     background-color: rgba(5, 9, 26, 1);
     color: rgba(45, 78, 145, 1);
     transition-property: background-color, border-color, color;
@@ -476,7 +475,7 @@
     margin: 4px;
     border-width: 2px;
     border-color: transparent;
-    cursor: link;
+
     transition-property: scale, border-color;
     transition-duration: 0.1s;
 }
@@ -562,7 +561,7 @@
     font-size: 13px;
     -unity-font-style: bold;
     letter-spacing: 2px;
-    cursor: link;
+
     transition-property: background-color;
     transition-duration: 0.1s;
     padding: 0 12px;

@@ -81,9 +81,9 @@ public class SplashController : MonoBehaviour
             yield return null;
         }
 
-        // Notify UI Toolkit layer if present (migration branch), else legacy UIManager
-        if (UIToolkitManager.Instance != null)
-            UIToolkitManager.Instance.OnSplashDismissed();
+        // Route through UIManager.Instance (UIToolkitManager overrides OnSplashDismissed)
+        if (UIManager.Instance != null)
+            UIManager.Instance.OnSplashDismissed();
         else
             UIManager.Instance?.ShowMainMenu();
 

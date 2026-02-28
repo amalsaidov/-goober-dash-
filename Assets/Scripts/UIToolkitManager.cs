@@ -134,8 +134,8 @@ public class UIToolkitManager : UIManager
         PanelOut(_onboarding, () => ShowMainMenu());
     }
 
-    // Called by SplashController (legacy path, if it survives disable)
-    public void OnSplashDismissed()
+    // Called by SplashController (legacy path)
+    public override void OnSplashDismissed()
     {
         if (_splashDone) return;
         _splashDone = true;
