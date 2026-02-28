@@ -201,6 +201,27 @@ public class UIManager : MonoBehaviour
         else lobbyPanel?.SetActive(false);
     }
 
+    // ── HUD Visibility ─────────────────────────────────────────────────────
+
+    public void ShowHUD() => SetHUDActive(true);
+    public void HideHUD() => SetHUDActive(false);
+
+    void SetHUDActive(bool active)
+    {
+        ToggleChip(playerCountText, active);
+        ToggleChip(roundText,       active);
+        ToggleChip(timerText,       active);
+        ToggleChip(positionText,    active);
+    }
+
+    // text → _HBg → _HChip (container wrapping glow + bg)
+    void ToggleChip(Text t, bool active)
+    {
+        if (!t) return;
+        var chip = t.transform.parent?.parent?.gameObject;
+        if (chip) chip.SetActive(active);
+    }
+
     // ── Position ───────────────────────────────────────────────────────────
 
     static readonly string[] suffixes = { "", "st", "nd", "rd", "th", "th", "th", "th", "th" };

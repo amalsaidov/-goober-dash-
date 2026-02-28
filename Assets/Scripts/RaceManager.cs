@@ -49,6 +49,8 @@ public class RaceManager : MonoBehaviour
         }
 #endif
 
+        // Hide HUD until race actually starts
+        UIManager.Instance?.HideHUD();
         // Show main menu — race starts only after the player clicks PLAY
         UIManager.Instance?.ShowMainMenu();
     }
@@ -103,6 +105,7 @@ public class RaceManager : MonoBehaviour
 
     IEnumerator Countdown()
     {
+        UIManager.Instance?.ShowHUD();
         UIManager.Instance?.ShowRoundText(
             (LocalizationManager.Instance?.Get("hud.round") ?? "Round ") + round);
         UIManager.Instance?.UpdatePlayerCount(players.Count);
@@ -208,6 +211,7 @@ public class RaceManager : MonoBehaviour
                                        : (loc?.Get("msg.losetext") ?? "Better luck next time...");
             Color  col     = playerWon ? new Color(0.2f, 1f, 0.3f) : new Color(1f, 0.28f, 0.28f);
 
+            UIManager.Instance?.HideHUD();
             yield return new WaitForSeconds(1.5f);
             UIManager.Instance?.ShowEndScreen(title, sub, col);
             yield break;
@@ -240,6 +244,7 @@ public class RaceManager : MonoBehaviour
         UIManager.Instance?.HideEndScreen();
         ReviveAllPlayers();
         round = 1;
+        UIManager.Instance?.HideHUD();
         UIManager.Instance?.ShowMainMenu();
     }
 

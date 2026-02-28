@@ -1889,19 +1889,26 @@ public class SceneSetup : Editor
     static Text HudChip(Transform parent, string name, string text,
                         Vector2 anchor, Vector2 pos, Vector2 size, int fontSize, Color accent)
     {
+        // Container — single toggle point for ShowHUD/HideHUD
+        var container = new GameObject(name + "_HChip"); container.transform.SetParent(parent, false);
+        var crt = container.AddComponent<RectTransform>();
+        crt.anchorMin = crt.anchorMax = crt.pivot = anchor;
+        crt.anchoredPosition = pos; crt.sizeDelta = new Vector2(size.x + 6, size.y + 6);
+        container.SetActive(false); // hidden until race starts
+
         // Outer glow (slightly wider/taller, very soft)
-        var glowGO = new GameObject(name + "_HGlow"); glowGO.transform.SetParent(parent, false);
+        var glowGO = new GameObject(name + "_HGlow"); glowGO.transform.SetParent(container.transform, false);
         glowGO.AddComponent<Image>().color = new Color(accent.r, accent.g, accent.b, 0.14f);
         var grt = glowGO.GetComponent<RectTransform>();
-        grt.anchorMin = grt.anchorMax = grt.pivot = anchor;
-        grt.anchoredPosition = pos; grt.sizeDelta = new Vector2(size.x + 6, size.y + 6);
+        grt.anchorMin = Vector2.zero; grt.anchorMax = Vector2.one;
+        grt.offsetMin = Vector2.zero; grt.offsetMax = Vector2.zero;
 
         // Dark pill background
-        var bg = new GameObject(name + "_HBg"); bg.transform.SetParent(parent, false);
+        var bg = new GameObject(name + "_HBg"); bg.transform.SetParent(container.transform, false);
         bg.AddComponent<Image>().color = new Color(0.02f, 0.04f, 0.12f, 0.82f);
         var brt = bg.GetComponent<RectTransform>();
-        brt.anchorMin = brt.anchorMax = brt.pivot = anchor;
-        brt.anchoredPosition = pos; brt.sizeDelta = size;
+        brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one;
+        brt.offsetMin = new Vector2(3, 3); brt.offsetMax = new Vector2(-3, -3);
 
         // Accent left stripe (4px)
         var bar = new GameObject(name + "_HBar"); bar.transform.SetParent(bg.transform, false);
