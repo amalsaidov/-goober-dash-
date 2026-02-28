@@ -2,16 +2,12 @@
   <Style src="../USS/theme.uss" />
 
   <ui:VisualElement style="flex:1; align-items:center; justify-content:center;">
-
     <ui:Label name="end-title" class="modal-title"
-              style="font-size:80px; color:rgba(25,240,130,1);
-                     -unity-text-outline-color:rgba(5,110,55,0.7);" text="YOU WIN!" />
+              style="font-size:76px; color:rgba(20,225,120,1);
+                     -unity-text-outline-color:rgba(5,100,55,0.75);" text="YOU WIN!" />
+    <ui:VisualElement class="modal-rule" />
     <ui:Label name="end-sub" class="modal-sub" text="You beat everyone!" />
-
-    <ui:Button name="btn-again" class="btn btn--gold"
-               style="min-width:300px;" text="↺  PLAY AGAIN" />
-    <ui:Button name="btn-menu"  class="btn btn--ghost"
-               style="min-width:300px;" text="⌂  MAIN MENU" />
-
+    <ui:Button name="btn-again" class="btn btn--gold"  style="min-width:300px;" text="PLAY AGAIN" />
+    <ui:Button name="btn-menu"  class="btn btn--ghost" style="min-width:300px;" text="MAIN MENU" />
   </ui:VisualElement>
 </ui:UXML>

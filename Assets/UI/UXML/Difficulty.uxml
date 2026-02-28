@@ -3,43 +3,50 @@
 
   <ui:VisualElement style="flex:1; align-items:center; justify-content:center;">
 
-    <ui:Label class="page-title" text="SELECT DIFFICULTY" />
-    <ui:Label class="page-sub"   text="CHOOSE  YOUR  CHALLENGE" />
+    <ui:VisualElement class="page-header">
+      <ui:Label class="page-title" text="DIFFICULTY" />
+      <ui:VisualElement class="page-rule" />
+      <ui:Label class="page-sub" text="SELECT  YOUR  CHALLENGE" />
+    </ui:VisualElement>
 
     <ui:VisualElement class="diff-grid">
 
       <ui:Button name="btn-easy" class="diff-card diff-card--easy">
+        <ui:Label class="diff-card__number" text="1" />
         <ui:Label class="diff-card__name diff-card__name--easy" text="EASY" />
         <ui:VisualElement class="diff-card__sep" />
         <ui:Label class="diff-card__desc"
-                  text="Slow bots · frequent mistakes · perfect for learning the track" />
+                  text="Slow reaction · many mistakes · great for first runs" />
       </ui:Button>
 
       <ui:Button name="btn-normal" class="diff-card diff-card--normal">
+        <ui:Label class="diff-card__number" text="2" />
         <ui:Label class="diff-card__name diff-card__name--normal" text="NORMAL" />
         <ui:VisualElement class="diff-card__sep" />
         <ui:Label class="diff-card__desc"
-                  text="Balanced opponents · occasional errors · fair competitive race" />
+                  text="Balanced AI · occasional errors · competitive pace" />
       </ui:Button>
 
       <ui:Button name="btn-hard" class="diff-card diff-card--hard">
+        <ui:Label class="diff-card__number" text="3" />
         <ui:Label class="diff-card__name diff-card__name--hard" text="HARD" />
         <ui:VisualElement class="diff-card__sep" />
         <ui:Label class="diff-card__desc"
-                  text="Sharp AI · wall-jump shortcuts · rare mistakes · high stakes" />
+                  text="Sharp AI · wall-jump shortcuts · near-perfect lines" />
       </ui:Button>
 
       <ui:Button name="btn-ultra" class="diff-card diff-card--ultra">
+        <ui:Label class="diff-card__number" text="4" />
         <ui:Label class="diff-card__name diff-card__name--ultra" text="ULTRA" />
         <ui:VisualElement class="diff-card__sep" />
         <ui:Label class="diff-card__desc"
-                  text="Perfect reaction · zero errors · plays the optimal line every lap" />
+                  text="Perfect AI · zero reaction delay · no margin for error" />
       </ui:Button>
 
     </ui:VisualElement>
 
     <ui:Button name="btn-back" class="btn btn--ghost"
-               style="margin-top:28px; min-width:200px;" text="←  BACK" />
+               style="margin-top:24px; min-width:200px;" text="BACK" />
 
   </ui:VisualElement>
 </ui:UXML>
