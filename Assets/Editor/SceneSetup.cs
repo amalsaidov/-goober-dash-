@@ -758,6 +758,9 @@ public class SceneSetup : Editor
         // ── Wire localization keys to all static UI texts ────────
         PostLocalize(cgo.transform);
 
+        // ── UI Toolkit layer (parallel to legacy UGUI) ────────────
+        BuildUIToolkit();
+
         // ── Touch controls (on-screen buttons for iOS/iPad) ──────
         var tcGO = new GameObject("TouchControls");
         tcGO.AddComponent<TouchControlsOverlay>();
@@ -765,6 +768,47 @@ public class SceneSetup : Editor
         // ── Debug overlay — top-left corner HUD (` to toggle) ────
         var dbgGO = new GameObject("DebugOverlay");
         dbgGO.AddComponent<DebugOverlay>();
+    }
+
+    static void BuildUIToolkit()
+    {
+        const string psPath   = "Assets/UI/PanelSettings/GamePanelSettings.asset";
+        const string uiRootName = "UIToolkitRoot";
+
+        // ── PanelSettings asset (create once, reuse) ──────────────
+        var ps = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.PanelSettings>(psPath);
+        if (ps == null)
+        {
+            ps = ScriptableObject.CreateInstance<UnityEngine.UIElements.PanelSettings>();
+            ps.scaleMode            = UnityEngine.UIElements.PanelScaleMode.ScaleWithScreenSize;
+            ps.referenceResolution  = new Vector2(1920, 1080);
+            ps.screenMatchMode      = UnityEngine.UIElements.PanelScreenMatchMode.MatchWidthOrHeight;
+            ps.match                = 0.5f;
+            ps.sortingOrder         = 10;
+            AssetDatabase.CreateAsset(ps, psPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[SceneSetup] Created PanelSettings at " + psPath);
+        }
+
+        // ── VisualTreeAsset (GameRoot.uxml) ───────────────────────
+        const string uxmlPath = "Assets/UI/UXML/GameRoot.uxml";
+        var vta = AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.VisualTreeAsset>(uxmlPath);
+        if (vta == null)
+        {
+            Debug.LogWarning("[SceneSetup] GameRoot.uxml not found at " + uxmlPath +
+                             " — UI Toolkit layer skipped.");
+            return;
+        }
+
+        // ── UIDocument GameObject ─────────────────────────────────
+        var go = new GameObject(uiRootName);
+        var doc = go.AddComponent<UnityEngine.UIElements.UIDocument>();
+        doc.panelSettings = ps;
+        doc.visualTreeAsset = vta;
+
+        go.AddComponent<UIToolkitManager>();
+
+        Debug.Log("[SceneSetup] UIToolkitRoot created with GameRoot.uxml");
     }
 
     // ── Attach LocalizedText to all static UI strings ──────────

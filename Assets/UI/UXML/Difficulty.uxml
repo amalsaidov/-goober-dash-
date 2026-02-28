@@ -1,48 +1,45 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
   <Style src="../USS/theme.uss" />
 
-  <ui:VisualElement style="align-items:center; justify-content:center; flex:1;">
+  <ui:VisualElement style="flex:1; align-items:center; justify-content:center;">
 
-    <ui:Label class="title" text="SELECT DIFFICULTY"
-              style="font-size:52px; margin-bottom:8px;" />
-    <ui:Label class="subtitle" text="Choose your challenge" style="margin-bottom:36px;" />
+    <ui:Label class="page-title" text="SELECT DIFFICULTY" />
+    <ui:Label class="page-sub"   text="CHOOSE  YOUR  CHALLENGE" />
 
-    <!-- 2×2 grid -->
-    <ui:VisualElement style="flex-direction:row; flex-wrap:wrap;
-                             justify-content:center; max-width:640px;">
+    <ui:VisualElement class="diff-grid">
 
       <ui:Button name="btn-easy" class="diff-card diff-card--easy">
-        <ui:Label class="diff-card__title" text="EASY"
-                  style="color: rgba(25,242,133,1);" />
+        <ui:Label class="diff-card__name diff-card__name--easy" text="EASY" />
+        <ui:VisualElement class="diff-card__sep" />
         <ui:Label class="diff-card__desc"
-                  text="Slow bots · lots of mistakes · forgiving" />
+                  text="Slow bots · frequent mistakes · perfect for learning the track" />
       </ui:Button>
 
       <ui:Button name="btn-normal" class="diff-card diff-card--normal">
-        <ui:Label class="diff-card__title" text="NORMAL"
-                  style="color: rgba(51,148,255,1);" />
+        <ui:Label class="diff-card__name diff-card__name--normal" text="NORMAL" />
+        <ui:VisualElement class="diff-card__sep" />
         <ui:Label class="diff-card__desc"
-                  text="Balanced · occasional errors · fair race" />
+                  text="Balanced opponents · occasional errors · fair competitive race" />
       </ui:Button>
 
       <ui:Button name="btn-hard" class="diff-card diff-card--hard">
-        <ui:Label class="diff-card__title" text="HARD"
-                  style="color: rgba(255,138,15,1);" />
+        <ui:Label class="diff-card__name diff-card__name--hard" text="HARD" />
+        <ui:VisualElement class="diff-card__sep" />
         <ui:Label class="diff-card__desc"
-                  text="Sharp bots · wall jumps · rare mistakes" />
+                  text="Sharp AI · wall-jump shortcuts · rare mistakes · high stakes" />
       </ui:Button>
 
       <ui:Button name="btn-ultra" class="diff-card diff-card--ultra">
-        <ui:Label class="diff-card__title" text="ULTRA"
-                  style="color: rgba(255,56,87,1);" />
+        <ui:Label class="diff-card__name diff-card__name--ultra" text="ULTRA" />
+        <ui:VisualElement class="diff-card__sep" />
         <ui:Label class="diff-card__desc"
-                  text="Perfect AI · instant reactions · no mercy" />
+                  text="Perfect reaction · zero errors · plays the optimal line every lap" />
       </ui:Button>
 
     </ui:VisualElement>
 
     <ui:Button name="btn-back" class="btn btn--ghost"
-               text="BACK" style="margin-top:28px; min-width:180px;" />
+               style="margin-top:28px; min-width:200px;" text="←  BACK" />
 
   </ui:VisualElement>
 </ui:UXML>

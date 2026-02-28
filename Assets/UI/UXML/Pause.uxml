@@ -1,18 +1,17 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
   <Style src="../USS/theme.uss" />
 
-  <ui:VisualElement style="position:absolute; left:0; top:0; right:0; bottom:0;
-                            background-color:rgba(0,0,0,0.7);
-                            align-items:center; justify-content:center;">
+  <ui:VisualElement class="overlay-dim overlay-dim--visible">
+    <ui:VisualElement class="modal-box">
 
-    <ui:VisualElement class="card" style="align-items:center; min-width:360px; padding:40px 48px;">
-      <ui:Label text="⏸" style="font-size:64px; color:rgba(255,199,20,1); margin-bottom:8px;" />
-      <ui:Label class="title" text="PAUSED" style="font-size:56px; margin-bottom:32px;" />
+      <ui:Label class="modal-icon" text="⏸" style="color:rgba(255,210,30,1);" />
+      <ui:Label class="modal-title" text="PAUSED" style="color:rgba(255,210,30,1);
+                -unity-text-outline-color:rgba(140,100,0,0.6);" />
 
-      <ui:Button name="btn-resume"  class="btn btn--gold"    text="RESUME" />
-      <ui:Button name="btn-restart" class="btn btn--primary" text="RESTART" />
-      <ui:Button name="btn-menu"    class="btn btn--ghost"   text="MAIN MENU" />
+      <ui:Button name="btn-resume"  class="btn btn--gold"  style="min-width:280px;" text="▶  RESUME" />
+      <ui:Button name="btn-restart" class="btn btn--blue"  style="min-width:280px;" text="↺  RESTART" />
+      <ui:Button name="btn-menu"    class="btn btn--ghost" style="min-width:280px;" text="⌂  MAIN MENU" />
+
     </ui:VisualElement>
-
   </ui:VisualElement>
 </ui:UXML>

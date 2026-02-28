@@ -1,0 +1,24 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <Style src="../USS/theme.uss" />
+
+  <ui:VisualElement class="ob-root">
+
+    <ui:Label name="ob-title" class="ob-title" text="GOOBER DASH" />
+    <ui:Label name="ob-tag"   class="ob-tag"   text="RACE  ·  JUMP  ·  WIN" />
+
+    <ui:VisualElement class="ob-chips">
+      <ui:VisualElement class="ob-chip">
+        <ui:Label class="ob-chip__text" text="FAST-PACED" />
+      </ui:VisualElement>
+      <ui:VisualElement class="ob-chip">
+        <ui:Label class="ob-chip__text" text="MULTIPLAYER" />
+      </ui:VisualElement>
+      <ui:VisualElement class="ob-chip">
+        <ui:Label class="ob-chip__text" text="RANKED BOTS" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:Label name="ob-tap" class="ob-tap" text="TAP  TO  START" />
+
+  </ui:VisualElement>
+</ui:UXML>

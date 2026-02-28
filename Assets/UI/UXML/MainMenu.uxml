@@ -1,27 +1,18 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
   <Style src="../USS/theme.uss" />
 
-  <ui:VisualElement style="align-items:center; justify-content:center; flex:1;">
+  <ui:VisualElement class="mm-root">
 
-    <!-- Title -->
-    <ui:Label name="mm-title" class="title" text="GOOBER DASH" />
-    <ui:Label name="mm-sub"   class="subtitle" text="RACE · JUMP · WIN" />
+    <ui:Label name="mm-title" class="mm-title" text="GOOBER DASH" />
+    <ui:Label name="mm-sub"   class="mm-sub"   text="RACE  ·  JUMP  ·  WIN" />
 
-    <!-- Chips row -->
-    <ui:VisualElement style="flex-direction:row; margin-top:16px; margin-bottom:40px;">
-      <ui:Label class="label-sec" text="FAST-PACED" style="margin:0 12px;" />
-      <ui:Label class="label-sec" text="· MULTIPLAYER" style="margin:0 12px;" />
-      <ui:Label class="label-sec" text="· RANKED BOTS" style="margin:0 12px;" />
+    <ui:VisualElement class="mm-buttons">
+      <ui:Button name="btn-play"        class="btn btn--gold"  text="▶   PLAY" />
+      <ui:Button name="btn-multiplayer" class="btn btn--blue"  text="◉   MULTIPLAYER" />
+      <ui:Button name="btn-settings"    class="btn btn--ghost" text="⚙   SETTINGS" />
     </ui:VisualElement>
 
-    <!-- Buttons -->
-    <ui:Button name="btn-play"        class="btn btn--gold"    text="PLAY" />
-    <ui:Button name="btn-multiplayer" class="btn btn--primary" text="MULTIPLAYER" />
-    <ui:Button name="btn-settings"    class="btn btn--ghost"   text="SETTINGS" />
-
-    <!-- Version -->
-    <ui:Label name="mm-ver" class="label-sec"
-              text="v7.0" style="margin-top:32px; font-size:13px;" />
+    <ui:Label name="mm-ver" class="mm-ver" text="V 7.0" />
 
   </ui:VisualElement>
 </ui:UXML>
