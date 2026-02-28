@@ -202,7 +202,8 @@ public class SceneSetup : Editor
                            "DifficultyManager","MainMenuManager","GameSettings",
                            "PauseManager","NetworkManager","NetworkLobbyManager",
                            "LocalizationManager","GlobalLight 2D","TouchControls",
-                           "DebugOverlay","OnboardingPanel","WorldThemeManager" };
+                           "DebugOverlay","OnboardingPanel","WorldThemeManager",
+                           "UIToolkitRoot" };
         foreach (string n in named) { var o = GameObject.Find(n); if (o) DestroyImmediate(o); }
 
         // Destroy ALL LanDiscovery instances — GameObject.Find only gets the first,

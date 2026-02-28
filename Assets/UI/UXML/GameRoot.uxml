@@ -14,7 +14,7 @@
   <Style src="../USS/theme.uss" />
 
   <!-- Panels — stacked, only one visible at a time -->
-  <ui:Instance template="Onboarding" name="OnboardingPanel" class="panel panel--visible" />
+  <ui:Instance template="Onboarding" name="OnboardingPanel" class="panel" />
   <ui:Instance template="MainMenu"   name="MainMenuPanel"   class="panel" />
   <ui:Instance template="Difficulty" name="DifficultyPanel" class="panel" />
   <ui:Instance template="Settings"   name="SettingsPanel"   class="panel" />

@@ -81,8 +81,12 @@ public class SplashController : MonoBehaviour
             yield return null;
         }
 
-        // Show main menu via UIManager
-        UIManager.Instance?.ShowMainMenu();
+        // Notify UI Toolkit layer if present (migration branch), else legacy UIManager
+        if (UIToolkitManager.Instance != null)
+            UIToolkitManager.Instance.OnSplashDismissed();
+        else
+            UIManager.Instance?.ShowMainMenu();
+
         gameObject.SetActive(false);
     }
 }

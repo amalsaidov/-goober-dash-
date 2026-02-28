@@ -34,6 +34,10 @@ public class UIToolkitManager : MonoBehaviour
     // End
     Label _endTitle, _endSub;
 
+    // Onboarding
+    VisualElement _onboarding;
+    bool _splashDone;
+
     void Awake()
     {
         if (Instance == null) Instance = this;
@@ -41,6 +45,13 @@ public class UIToolkitManager : MonoBehaviour
 
         var doc = GetComponent<UIDocument>();
         _root = doc.rootVisualElement;
+
+        // Root must NOT block legacy UGUI or game input on transparent areas.
+        // Buttons/interactive children keep their default PickingMode.Position.
+        _root.pickingMode = PickingMode.Ignore;
+
+        // Onboarding
+        _onboarding = _root.Q("OnboardingPanel");
 
         // Panels
         _mainMenu   = _root.Q("MainMenuPanel");
@@ -70,6 +81,30 @@ public class UIToolkitManager : MonoBehaviour
         _endSub   = _root.Q<Label>("end-sub");
 
         WireButtons();
+
+        // Onboarding: tap/click anywhere dismisses splash
+        if (_onboarding != null)
+        {
+            _onboarding.pickingMode = PickingMode.Position;
+            _onboarding.RegisterCallback<PointerDownEvent>(_ => DismissOnboarding());
+        }
+    }
+
+    void DismissOnboarding()
+    {
+        if (_splashDone) return;
+        _splashDone = true;
+        _onboarding?.RemoveFromClassList("panel--visible");
+        ShowMainMenu();
+    }
+
+    // Called by SplashController when legacy splash is dismissed
+    public void OnSplashDismissed()
+    {
+        if (_splashDone) return;
+        _splashDone = true;
+        _onboarding?.RemoveFromClassList("panel--visible");
+        ShowMainMenu();
     }
 
     // ── Button wiring ─────────────────────────────────────────────────────
