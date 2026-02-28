@@ -3,61 +3,74 @@
 
   <ui:VisualElement class="lobby-root">
 
-    <ui:Label class="page-title" text="LOBBY" />
-    <ui:Label class="page-sub"   text="LAN  MULTIPLAYER" />
+    <ui:VisualElement class="page-header">
+      <ui:Label class="page-title" text="MULTIPLAYER" />
+      <ui:VisualElement class="page-rule" />
+      <ui:Label class="page-sub" text="LAN  ·  LOCAL  NETWORK" />
+    </ui:VisualElement>
 
-    <!-- ── Connect View ─────────────────────────────────── -->
-    <ui:VisualElement name="connect-view" class="card card--blue"
-                      style="align-items:center; min-width:460px;">
+    <!-- ── Connect View ─────────────────────────────────────────────── -->
+    <ui:VisualElement name="connect-view" class="lobby-connect">
 
-      <ui:Label class="card-header card-header--blue" text="YOUR  NICKNAME" />
+      <!-- Nickname + action buttons (left column) -->
+      <ui:VisualElement class="card card--blue lobby-connect__panel">
+        <ui:Label class="card-header card-header--blue" text="YOUR  NICKNAME" />
 
-      <ui:TextField name="nickname-field" class="nickname-field"
-                    value="Player" max-length="20" />
+        <ui:TextField name="nickname-field" class="nickname-field"
+                      value="Player" max-length="20" />
 
-      <ui:Button name="btn-host" class="btn btn--gold"
-                 style="margin-top:16px; min-width:320px;" text="★  HOST  GAME" />
-      <ui:Button name="btn-join" class="btn btn--blue"
-                 style="min-width:320px;" text="◉  JOIN  GAME" />
-      <ui:Button name="btn-back" class="btn btn--ghost"
-                 style="min-width:320px;" text="←  BACK" />
+        <ui:Button name="btn-host" class="btn btn--gold"
+                   style="margin-top:16px;" text="★  HOST  GAME" />
+        <ui:Button name="btn-back" class="btn btn--ghost" text="←  BACK" />
+      </ui:VisualElement>
+
+      <!-- Server browser (right column) -->
+      <ui:VisualElement class="card card--cyan lobby-connect__browser">
+        <ui:Label class="card-header card-header--cyan" text="AVAILABLE  SERVERS" />
+
+        <ui:Label name="server-search-text" class="server-search-hint"
+                  text="Searching for games on local network…" />
+
+        <ui:ScrollView name="server-list"
+                       style="flex:1; max-height:240px;" />
+      </ui:VisualElement>
 
     </ui:VisualElement>
 
-    <!-- ── Room View ──────────────────────────────────────── -->
-    <ui:VisualElement name="room-view" style="align-items:center; display:none; min-width:540px;">
+    <!-- ── Room View ─────────────────────────────────────────────────── -->
+    <ui:VisualElement name="room-view" style="align-items:center; display:none; width:580px;">
 
-      <!-- IP (host only) -->
-      <ui:VisualElement name="host-section" class="ip-display">
-        <ui:Label class="ip-label-hint" text="SHARE  THIS  IP" />
-        <ui:Label name="ip-address" class="ip-address" text="—" />
+      <!-- IP banner (host only) -->
+      <ui:VisualElement name="host-section" class="ip-display" style="width:100%; margin-bottom:16px;">
+        <ui:Label class="ip-label-hint" text="SHARE  THIS  IP  ·  PORT  7777" />
+        <ui:Label name="ip-address"     class="ip-address" text="—" />
       </ui:VisualElement>
 
-      <!-- Client waiting -->
+      <!-- Client waiting text -->
       <ui:Label name="client-wait" class="page-sub"
                 text="Waiting for host to start…"
-                style="display:none; margin-bottom:16px;" />
+                style="display:none; margin-bottom:20px;" />
 
       <!-- Player list -->
-      <ui:VisualElement class="card card--blue" style="width:520px; padding:16px 20px; margin-bottom:8px;">
+      <ui:VisualElement class="card card--blue" style="width:100%; padding:16px 20px; margin-bottom:8px;">
         <ui:Label class="card-header card-header--blue" text="PLAYERS" />
-        <ui:ScrollView name="player-list" style="max-height:220px;" />
+        <ui:ScrollView name="player-list" style="max-height:200px;" />
       </ui:VisualElement>
 
       <!-- Bots toggle (host only) -->
       <ui:VisualElement name="bots-section" class="card"
-                        style="width:520px; flex-direction:row; align-items:center;
-                               justify-content:space-between; padding:16px 24px; margin-bottom:8px;">
-        <ui:Label class="setting-row__label" text="Fill with Bots" />
+                        style="width:100%; flex-direction:row; align-items:center;
+                               justify-content:space-between; padding:14px 22px; margin-bottom:8px;">
+        <ui:Label class="setting-row__label" text="Fill  with  Bots" />
         <ui:Button name="btn-bots-toggle" class="toggle-btn toggle-btn--active"
-                   style="min-width:80px; height:36px;" text="ON" />
+                   style="min-width:70px; height:34px;" text="ON" />
       </ui:VisualElement>
 
       <!-- Actions -->
       <ui:Button name="btn-start" class="btn btn--green"
-                 style="min-width:320px; margin-top:8px;" text="▶▶  START  RACE" />
+                 style="width:100%; margin-top:8px;" text="▶▶  START  RACE" />
       <ui:Button name="btn-leave" class="btn btn--danger"
-                 style="min-width:220px;" text="✕  LEAVE" />
+                 style="min-width:200px;" text="✕  LEAVE" />
 
     </ui:VisualElement>
 

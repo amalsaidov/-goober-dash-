@@ -42,7 +42,7 @@ public class UIManager : MonoBehaviour
     [Header("Lobby")]
     public GameObject lobbyPanel;
 
-    void Awake()
+    protected virtual void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
@@ -50,33 +50,33 @@ public class UIManager : MonoBehaviour
 
     // ── HUD ────────────────────────────────────────────────────────────────
 
-    public void UpdateScore(int score)
+    public virtual void UpdateScore(int score)
     {
         if (scoreText) scoreText.text = "Score: " + score;
     }
 
-    public void UpdateLives(int lives) { }
+    public virtual void UpdateLives(int lives) { }
 
-    public void UpdateTimer(float time)
+    public virtual void UpdateTimer(float time)
     {
         if (timerText) timerText.text = Mathf.CeilToInt(time) + "s";
     }
 
-    public void UpdatePlayerCount(int count)
+    public virtual void UpdatePlayerCount(int count)
     {
         if (playerCountText)
             playerCountText.text = string.Format(
                 LocalizationManager.Instance?.Get("hud.players.fmt") ?? "Players: {0}", count);
     }
 
-    public void ShowRoundText(string text)
+    public virtual void ShowRoundText(string text)
     {
         if (roundText) roundText.text = text;
     }
 
     // ── Countdown ──────────────────────────────────────────────────────────
 
-    public void ShowCountdown(string text)
+    public virtual void ShowCountdown(string text)
     {
         if (countdownPanel) countdownPanel.SetActive(true);
         if (countdownText)
@@ -86,14 +86,14 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    public void HideCountdown()
+    public virtual void HideCountdown()
     {
         if (countdownPanel) countdownPanel.SetActive(false);
     }
 
     // ── Message ────────────────────────────────────────────────────────────
 
-    public void ShowMessage(string msg, Color color)
+    public virtual void ShowMessage(string msg, Color color)
     {
         if (messagePanel) messagePanel.SetActive(true);
         if (messageText)
@@ -110,20 +110,20 @@ public class UIManager : MonoBehaviour
         HideMessage();
     }
 
-    public void HideMessage()
+    public virtual void HideMessage()
     {
         if (messagePanel) messagePanel.SetActive(false);
     }
 
     // ── Main Menu ──────────────────────────────────────────────────────────
 
-    public void ShowMainMenu()
+    public virtual void ShowMainMenu()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PanelIn(mainMenuPanel);
         else mainMenuPanel?.SetActive(true);
     }
 
-    public void HideMainMenu()
+    public virtual void HideMainMenu()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PanelOut(mainMenuPanel);
         else mainMenuPanel?.SetActive(false);
@@ -131,13 +131,13 @@ public class UIManager : MonoBehaviour
 
     // ── Settings ───────────────────────────────────────────────────────────
 
-    public void ShowSettings()
+    public virtual void ShowSettings()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PanelIn(settingsPanel);
         else settingsPanel?.SetActive(true);
     }
 
-    public void HideSettings()
+    public virtual void HideSettings()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PanelOut(settingsPanel);
         else settingsPanel?.SetActive(false);
@@ -145,13 +145,13 @@ public class UIManager : MonoBehaviour
 
     // ── Difficulty ─────────────────────────────────────────────────────────
 
-    public void ShowDifficultyPanel()
+    public virtual void ShowDifficultyPanel()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PanelIn(difficultyPanel);
         else difficultyPanel?.SetActive(true);
     }
 
-    public void HideDifficultyPanel()
+    public virtual void HideDifficultyPanel()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PanelOut(difficultyPanel);
         else difficultyPanel?.SetActive(false);
@@ -159,7 +159,7 @@ public class UIManager : MonoBehaviour
 
     // ── End Screen ─────────────────────────────────────────────────────────
 
-    public void ShowEndScreen(string title, string sub, Color color)
+    public virtual void ShowEndScreen(string title, string sub, Color color)
     {
         if (endTitleText) { endTitleText.text = title; endTitleText.color = color; }
         if (endSubText)   endSubText.text = sub;
@@ -167,7 +167,7 @@ public class UIManager : MonoBehaviour
         else endPanel?.SetActive(true);
     }
 
-    public void HideEndScreen()
+    public virtual void HideEndScreen()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PanelOut(endPanel);
         else endPanel?.SetActive(false);
@@ -175,13 +175,13 @@ public class UIManager : MonoBehaviour
 
     // ── Pause Menu ─────────────────────────────────────────────────────────
 
-    public void ShowPauseMenu()
+    public virtual void ShowPauseMenu()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PauseIn(pausePanel);
         else pausePanel?.SetActive(true);
     }
 
-    public void HidePauseMenu(System.Action onDone = null)
+    public virtual void HidePauseMenu(System.Action onDone = null)
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PauseOut(pausePanel, onDone);
         else { pausePanel?.SetActive(false); onDone?.Invoke(); }
@@ -189,13 +189,13 @@ public class UIManager : MonoBehaviour
 
     // ── Lobby ──────────────────────────────────────────────────────────────
 
-    public void ShowLobbyPanel()
+    public virtual void ShowLobbyPanel()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PanelIn(lobbyPanel);
         else lobbyPanel?.SetActive(true);
     }
 
-    public void HideLobbyPanel()
+    public virtual void HideLobbyPanel()
     {
         if (MenuAnimator.Instance) MenuAnimator.Instance.PanelOut(lobbyPanel);
         else lobbyPanel?.SetActive(false);
@@ -204,7 +204,16 @@ public class UIManager : MonoBehaviour
     // ── Position ───────────────────────────────────────────────────────────
 
     static readonly string[] suffixes = { "", "st", "nd", "rd", "th", "th", "th", "th", "th" };
-    public void UpdatePosition(int pos, int total)
+    public virtual void ShowHUD() { }
+    public virtual void HideHUD() { }
+
+    // ── Lobby (overridden by UIToolkitManager) ─────────────────────────────
+    public virtual void RefreshLobby(int playerCount, bool botsOn, bool isHost) { }
+    public virtual void RefreshLobbyPlayers() { }
+    public virtual void RefreshLobbyServers() { }
+    public virtual void ShowLobbyRoomView(bool isHost) { }
+
+    public virtual void UpdatePosition(int pos, int total)
     {
         if (!positionText) return;
         bool isRussian = LocalizationManager.Instance?.Current == LocalizationManager.Lang.Russian;

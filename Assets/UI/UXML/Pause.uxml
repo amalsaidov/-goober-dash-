@@ -1,7 +1,8 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
   <Style src="../USS/theme.uss" />
 
-  <ui:VisualElement class="overlay-dim overlay-dim--visible">
+  <!-- Inner layout — outer wrapper (PausePanel in GameRoot) provides the dim background -->
+  <ui:VisualElement style="flex:1; align-items:center; justify-content:center;">
     <ui:VisualElement class="modal-box">
       <ui:Label class="modal-icon" text="⏸" style="color:rgba(255,200,0,1);" />
       <ui:Label class="modal-title" text="PAUSED"

@@ -83,6 +83,7 @@ public class RaceManager : MonoBehaviour
             LanDiscovery.Instance?.StopListening();
             NetworkLobbyManager.Instance?.JoinGame(ip);
             LobbyPanelController.Instance?.ShowRoomView(false);
+            UIManager.Instance?.ShowLobbyRoomView(false);
             yield break;
         }
         Debug.LogWarning("[CLONE] Auto-join timed out — no host found. In main editor: MULTIPLAYER → HOST, then re-enter Play Mode in clone.");

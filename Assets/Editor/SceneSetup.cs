@@ -809,6 +809,14 @@ public class SceneSetup : Editor
 
         go.AddComponent<UIToolkitManager>();
 
+        // ── Archive legacy GameCanvas — UIToolkitManager is now the UI layer ──
+        var legacyCanvas = GameObject.Find("GameCanvas");
+        if (legacyCanvas != null)
+        {
+            legacyCanvas.SetActive(false);
+            Debug.Log("[SceneSetup] Legacy GameCanvas archived (disabled) — UIToolkitManager is active.");
+        }
+
         Debug.Log("[SceneSetup] UIToolkitRoot created with GameRoot.uxml");
     }
 

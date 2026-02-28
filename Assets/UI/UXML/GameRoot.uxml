@@ -15,6 +15,7 @@
 
   <!-- Panels — stacked, only one visible at a time -->
   <ui:Instance template="Onboarding" name="OnboardingPanel" class="panel" />
+  <!-- UIToolkitManager.Awake() calls ShowOnboarding() → PanelIn() on startup -->
   <ui:Instance template="MainMenu"   name="MainMenuPanel"   class="panel" />
   <ui:Instance template="Difficulty" name="DifficultyPanel" class="panel" />
   <ui:Instance template="Settings"   name="SettingsPanel"   class="panel" />

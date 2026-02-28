@@ -214,7 +214,11 @@ public class LanDiscovery : MonoBehaviour
         NotifyUI();
     }
 
-    void NotifyUI() => LobbyPanelController.Instance?.RefreshServerList();
+    void NotifyUI()
+    {
+        LobbyPanelController.Instance?.RefreshServerList();
+        UIManager.Instance?.RefreshLobbyServers();
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

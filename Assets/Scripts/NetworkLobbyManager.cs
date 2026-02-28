@@ -62,6 +62,7 @@ public class NetworkLobbyManager : NetworkBehaviour
     void OnPlayersChanged(NetworkListEvent<LobbyPlayerData> _)
     {
         LobbyPanelController.Instance?.RefreshPlayerList();
+        UIManager.Instance?.RefreshLobbyPlayers();
         ApplyAllPlayerColors();
     }
 
@@ -365,12 +366,18 @@ public class NetworkLobbyManager : NetworkBehaviour
 
     [Rpc(SendTo.Everyone)]
     void SyncUIRpc(int count, bool bots)
-        => LobbyPanelController.Instance?.Refresh(count, bots, NetworkManager.Singleton.IsHost);
+    {
+        bool isHost = NetworkManager.Singleton.IsHost;
+        LobbyPanelController.Instance?.Refresh(count, bots, isHost);
+        UIManager.Instance?.RefreshLobby(count, bots, isHost);
+    }
 
     void RefreshUI()
     {
-        int count = IsServer ? NetworkManager.Singleton.ConnectedClientsList.Count : 1;
-        LobbyPanelController.Instance?.Refresh(count, nvBots.Value, IsHost);
+        int  count  = IsServer ? NetworkManager.Singleton.ConnectedClientsList.Count : 1;
+        bool isHost = IsHost;
+        LobbyPanelController.Instance?.Refresh(count, nvBots.Value, isHost);
+        UIManager.Instance?.RefreshLobby(count, nvBots.Value, isHost);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
