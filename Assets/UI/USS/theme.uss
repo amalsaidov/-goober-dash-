@@ -4,9 +4,7 @@
    ══════════════════════════════════════════════════════════════════ */
 
 /* ── Reset & Base ─────────────────────────────────────────────────── */
-VisualElement {
-    box-sizing: border-box;
-}
+/* box-sizing not supported in Unity USS — elements use border-box by default */
 
 /* ── Full-screen panel ────────────────────────────────────────────── */
 .panel {
@@ -397,7 +395,7 @@ VisualElement {
     border-bottom-color: rgba(25, 45, 95, 1);
 }
 
-.setting-row:last-child { border-bottom-width: 0; }
+/* :last-child not supported in Unity USS — border removed via UXML class instead */
 
 .setting-row__label {
     font-size: 16px;
