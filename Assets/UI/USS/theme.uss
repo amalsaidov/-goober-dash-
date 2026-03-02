@@ -747,3 +747,144 @@
     color: rgba(210, 235, 255, 1);
     letter-spacing: 2px;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   MAP SELECT
+   ══════════════════════════════════════════════════════════════════ */
+.panel-root {
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.panel-title {
+    font-size: 64px;
+    -unity-font-style: bold;
+    color: rgba(255, 200, 0, 1);
+    -unity-text-align: middle-center;
+    letter-spacing: 8px;
+    -unity-text-outline-width: 3px;
+    -unity-text-outline-color: rgba(110, 65, 0, 0.65);
+    margin-bottom: 8px;
+}
+
+.panel-subtitle {
+    font-size: 16px;
+    color: rgba(55, 90, 158, 1);
+    -unity-text-align: middle-center;
+    letter-spacing: 8px;
+    margin-bottom: 52px;
+}
+
+.map-cards-row {
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 44px;
+}
+
+/* Map card base */
+.map-card {
+    width: 380px;
+    min-height: 280px;
+    border-radius: 8px;
+    border-width: 1px;
+    margin: 0 18px;
+    padding: 0 0 28px 0;
+    align-items: stretch;
+    background-color: rgba(5, 9, 26, 1);
+
+    transition-property: scale, border-color;
+    transition-duration: 0.14s;
+}
+.map-card:hover { scale: 1.03 1.03; }
+
+.map-card--green  { border-color: rgba(14, 192, 96, 0.45); }
+.map-card--orange { border-color: rgba(255, 116, 10, 0.45); }
+.map-card--green:hover  { border-color: rgba(18, 220, 116, 0.9); }
+.map-card--orange:hover { border-color: rgba(255, 140, 28, 0.9); }
+
+/* Card header strip */
+.map-card__header {
+    flex-direction: row;
+    align-items: center;
+    padding: 20px 24px 16px 24px;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    margin-bottom: 20px;
+}
+.map-card__header--green  { background-color: rgba(14, 192, 96, 0.12); border-bottom-width: 1px; border-bottom-color: rgba(14, 192, 96, 0.2); }
+.map-card__header--orange { background-color: rgba(255, 116, 10, 0.12); border-bottom-width: 1px; border-bottom-color: rgba(255, 116, 10, 0.2); }
+
+.map-card__icon {
+    font-size: 32px;
+    margin-right: 12px;
+    -unity-text-align: middle-center;
+}
+
+.map-card__name {
+    font-size: 24px;
+    -unity-font-style: bold;
+    letter-spacing: 4px;
+    flex: 1;
+}
+.map-card--green  .map-card__name { color: rgba(18, 220, 116, 1); }
+.map-card--orange .map-card__name { color: rgba(255, 140, 28, 1); }
+
+.map-card__desc {
+    font-size: 14px;
+    color: rgba(72, 112, 182, 1);
+    -unity-text-align: middle-center;
+    letter-spacing: 1px;
+    margin: 0 24px 12px 24px;
+    white-space: normal;
+}
+
+.map-card__tag {
+    font-size: 12px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 5px;
+    margin: 0 24px 20px 24px;
+}
+.map-card--green  .map-card__tag { color: rgba(18, 200, 100, 0.7); }
+.map-card--orange .map-card__tag { color: rgba(255, 120, 20, 0.7); }
+
+/* Play button inside card */
+.map-card__btn {
+    height: 52px;
+    border-radius: 4px;
+    border-width: 0;
+    font-size: 16px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 4px;
+    margin: 0 24px;
+    transition-property: scale, background-color;
+    transition-duration: 0.1s;
+}
+.map-card__btn:active { scale: 0.97 0.97; }
+
+.map-card__btn--green  { background-color: rgba(14, 180, 88, 1);  color: rgba(4, 28, 14, 1); }
+.map-card__btn--orange { background-color: rgba(210, 90, 10, 1);  color: rgba(255, 240, 220, 1); }
+.map-card__btn--green:hover  { background-color: rgba(18, 220, 108, 1); }
+.map-card__btn--orange:hover { background-color: rgba(255, 120, 28, 1); }
+
+/* Secondary back button */
+.btn-secondary {
+    height: 48px;
+    min-width: 200px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(28, 52, 115, 1);
+    font-size: 15px;
+    -unity-font-style: bold;
+    letter-spacing: 4px;
+    -unity-text-align: middle-center;
+    background-color: transparent;
+    color: rgba(60, 98, 168, 1);
+    transition-property: border-color, color;
+    transition-duration: 0.1s;
+}
+.btn-secondary:hover  { border-color: rgba(55, 95, 195, 1); color: rgba(140, 186, 255, 1); }
+.btn-secondary:active { scale: 0.98 0.98; }

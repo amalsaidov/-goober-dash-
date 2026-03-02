@@ -7,8 +7,8 @@ using UnityEngine;
 /// </summary>
 public class PlayerTrail : MonoBehaviour
 {
-    public float interval = 0.04f;   // seconds between ghosts
-    public float fadeTime = 0.25f;   // seconds to fade out
+    public float interval = 0.07f;   // seconds between ghosts
+    public float fadeTime = 0.18f;   // seconds to fade out
 
     private SpriteRenderer _sr;
     private float _timer;
@@ -104,7 +104,7 @@ public class PlayerTrail : MonoBehaviour
         _pool[slot].sr.sortingOrder = _sr.sortingOrder - 1;
 
         Color c = _sr.color;
-        float a = c.a * 0.35f;
+        float a = c.a * 0.12f;  // very subtle ghost
         _pool[slot].sr.color = new Color(c.r, c.g, c.b, a);
         _pool[slot].alpha    = a;
         _pool[slot].life     = fadeTime;

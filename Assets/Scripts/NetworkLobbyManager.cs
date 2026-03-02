@@ -83,8 +83,8 @@ public class NetworkLobbyManager : NetworkBehaviour
                 var no = ns.GetComponent<NetworkObject>();
                 if (no != null && no.NetworkObjectId == noid)
                 {
-                    var sr = ns.GetComponent<SpriteRenderer>();
-                    if (sr) sr.color = col;
+                    // SetPlayerColor updates both the sprite AND stores it so ResetForRound keeps it
+                    ns.GetComponent<RacePlayer>()?.SetPlayerColor(col);
                     // Also update floating name tag
                     ns.SetNameTag(players[i].nickname.ToString(), col);
                     Debug.Log($"[Lobby] Color {players[i].colorIndex} → obj {noid} (client {players[i].clientId})");

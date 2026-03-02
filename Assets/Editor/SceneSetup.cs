@@ -167,14 +167,18 @@ public class SceneSetup : Editor
         ClearScene();
         groundLayer = CreateLayer("Ground");
         playerLayer = CreateLayer("Player");
-        Physics2D.IgnoreLayerCollision(playerLayer, playerLayer, true);
+        Physics2D.IgnoreLayerCollision(playerLayer, playerLayer, false); // players push each other
 
         SetupCamera();
         BuildSky();
         BuildMountains();
         BuildClouds();
-        BuildTrack();
-        BuildWaypoints();
+        BuildTrack();      // inside MapContainer_0
+        BuildWaypoints();  // for map 0 (inside MapContainer_0)
+        BuildTrack1();     // inside MapContainer_1 (active during setup so child Find() works)
+        BuildWaypoints1(); // for map 1 (inside MapContainer_1)
+        // Disable MapContainer_1 now that all its children are set up
+        if (_container1 != null) _container1.SetActive(false);
         SpawnPlayers();
         CreateManagers();
         CreateUI();
@@ -197,19 +201,31 @@ public class SceneSetup : Editor
         foreach (var cp in Object.FindObjectsByType<Checkpoint>(FindObjectsSortMode.None))
             DestroyImmediate(cp.gameObject);
 
-        string[] named = { "Main Camera","Sky_Top","Sky_Mid","Waypoints",
+        string[] named = { "Main Camera","Sky_Top","Sky_Mid","Waypoints","Waypoints1",
                            "GameCanvas","EventSystem","RaceManager","ScoreManager",
                            "DifficultyManager","MainMenuManager","GameSettings",
                            "PauseManager","NetworkManager","NetworkLobbyManager",
                            "LocalizationManager","GlobalLight 2D","TouchControls",
                            "DebugOverlay","OnboardingPanel","WorldThemeManager",
-                           "UIToolkitRoot" };
+                           "UIToolkitRoot","MapManager","SpectatorController" };
         foreach (string n in named) { var o = GameObject.Find(n); if (o) DestroyImmediate(o); }
 
         // Destroy ALL LanDiscovery instances — GameObject.Find only gets the first,
         // so repeated Setup runs accumulate duplicates without this fix.
         foreach (var ld in Object.FindObjectsByType<LanDiscovery>(FindObjectsSortMode.None))
             if (ld != null) DestroyImmediate(ld.gameObject);
+
+        // Destroy ALL UIDocument objects (UIToolkitRoot duplicates from repeated Setup runs)
+        foreach (var doc in Object.FindObjectsByType<UnityEngine.UIElements.UIDocument>(FindObjectsSortMode.None))
+            if (doc != null) DestroyImmediate(doc.gameObject);
+
+        // Destroy track containers from previous setup (use root objects so inactive ones are found too)
+        foreach (var rootGO in EditorSceneManager.GetActiveScene().GetRootGameObjects())
+        {
+            if (rootGO == null) continue;
+            if (rootGO.name == "MapContainer_0" || rootGO.name == "MapContainer_1")
+                DestroyImmediate(rootGO);
+        }
 
         // Destroy floating name tags (top-level objects, not under canvas)
         foreach (var pnt in Object.FindObjectsByType<PlayerNameTag>(FindObjectsSortMode.None))
@@ -219,6 +235,26 @@ public class SceneSetup : Editor
         foreach (var kz in Object.FindObjectsByType<KillZone>(FindObjectsSortMode.None))
             if (kz != null) DestroyImmediate(kz.gameObject);
 
+        // Destroy new mechanic/deco objects
+        foreach (var o in Object.FindObjectsByType<IceSurface>(FindObjectsSortMode.None))
+            if (o != null) DestroyImmediate(o.gameObject);
+        foreach (var o in Object.FindObjectsByType<WindZone>(FindObjectsSortMode.None))
+            if (o != null) DestroyImmediate(o.gameObject);
+        foreach (var o in Object.FindObjectsByType<DashBoost>(FindObjectsSortMode.None))
+            if (o != null) DestroyImmediate(o.gameObject);
+        foreach (var o in Object.FindObjectsByType<DashBar>(FindObjectsSortMode.None))
+            if (o != null) DestroyImmediate(o.gameObject);
+        foreach (var o in Object.FindObjectsByType<ConveyorBelt>(FindObjectsSortMode.None))
+            if (o != null) DestroyImmediate(o.gameObject);
+        foreach (var o in Object.FindObjectsByType<CrumblingPlatform>(FindObjectsSortMode.None))
+            if (o != null) DestroyImmediate(o.gameObject);
+        foreach (var o in Object.FindObjectsByType<LowGravityZone>(FindObjectsSortMode.None))
+            if (o != null) DestroyImmediate(o.gameObject);
+        foreach (var o in Object.FindObjectsByType<TeleportPad>(FindObjectsSortMode.None))
+            if (o != null) DestroyImmediate(o.gameObject);
+        foreach (var o in Object.FindObjectsByType<DynamicSpikes>(FindObjectsSortMode.None))
+            if (o != null) DestroyImmediate(o.gameObject);
+
         foreach (var sr in Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None))
         {
             if (sr == null) continue;
@@ -227,7 +263,8 @@ public class SceneSetup : Editor
                 n.StartsWith("Bnc") || n.StartsWith("Spd") || n.StartsWith("Fin") ||
                 n.StartsWith("Cld") || n.StartsWith("Mtn") || n.StartsWith("CP_") ||
                 n.StartsWith("Str") || n.StartsWith("Wrn") || n.StartsWith("Star") ||
-                n.StartsWith("Wll"))
+                n.StartsWith("Wll") || n.StartsWith("Ice") || n.StartsWith("Wnd") ||
+                n.StartsWith("Dsh") || n.StartsWith("Spk") || n.StartsWith("Deco"))
                 DestroyImmediate(sr.gameObject);
         }
     }
@@ -239,14 +276,14 @@ public class SceneSetup : Editor
         camGO.tag = "MainCamera";
         var cam = camGO.AddComponent<Camera>();
         cam.orthographic = true;
-        cam.orthographicSize = 6f;
+        cam.orthographicSize = 7.5f;
         cam.backgroundColor = SKY_MID; // WorldThemeManager updates this at runtime
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.transform.position = new Vector3(0, 0, -10);
         var cf = camGO.AddComponent<CameraFollow>();
         cf.offset = new Vector3(0f, 0f, -10f);
         cf.smoothSpeed = 5f;
-        cf.baseSize = 6f;
+        cf.baseSize = 7.5f;
     }
 
     // ── Background ─────────────────────────────────────────────
@@ -315,172 +352,432 @@ public class SceneSetup : Editor
         }
     }
 
-    // ── TRACK ──────────────────────────────────────────────────
+    // Container used by all track-object helpers — set before calling Gnd/Plt/etc.
+    static Transform _trackParent;
+    // Persistent refs to map containers — set by BuildTrack/BuildTrack1, consumed by CreateManagers
+    static GameObject _container0;
+    static GameObject _container1;
+
+    // ── TRACK MAP 0 — Forest Run ────────────────────────────────
+    // NON-LINEAR PATH:
+    //   Z1 right → Z2 up-staircase → Z3 left-bridge → Z4 up-climb →
+    //   Z5 right-skyhighway → Z6 down-descent → Z7 right+up → FINISH
+    // World span: x = -15 to +96,  y = -5 to +50
     static void BuildTrack()
     {
-        // ════════════════════════════════════════════════════════
-        // ZONE 1 — The Opener  (green, flat y=-3, 2 small gaps)
-        // ════════════════════════════════════════════════════════
-        Gnd("Gnd_Z1a", new Vector3(-9, -3, 0), new Vector3(13, 1, 1), Z1_GND);
-        Spd("Spd_Z1",  new Vector3(-6, -2.65f, 0), new Vector3(3.5f, 0.22f, 1));
-        Bnc("Bnc_Z1",  new Vector3(0.5f, -2.68f, 0), new Vector3(2.2f, 0.30f, 1));
-        // Gap 1: x=4 to x=7
-        Kz("KZ_Z1a",   new Vector3(5.5f, -8f, 0), new Vector3(5f, 5f, 1));
-        Gnd("Gnd_Z1b", new Vector3(10, -3, 0), new Vector3(6, 1, 1), Z1_GND);
-        // Gap 2: x=13 to x=17
-        Kz("KZ_Z1b",   new Vector3(15, -8f, 0), new Vector3(6f, 5f, 1));
-        Gnd("Gnd_Z1c", new Vector3(20, -3, 0), new Vector3(5, 1, 1), Z1_GND);
-        CP("CP_1", new Vector3(19, 0, 0));
+        var container = new GameObject("MapContainer_0");
+        _container0 = container;
+        _trackParent = container.transform;
+
+        // ── Platform color palette ────────────────────────────────────────────
+        var Pb2 = PLAT_Z2;  var Pt2 = PLAT_Z2T;   // brown staircase
+        var Pb3 = PLAT_Z3;  var Pt3 = PLAT_Z3T;   // stone bridge
+        var Pb4 = PLAT_Z4;  var Pt4 = PLAT_Z4T;   // purple sky climb
+        var Pb6 = PLAT_Z6;  var Pt6 = PLAT_Z6T;   // crimson descent
 
         // ════════════════════════════════════════════════════════
-        // ZONE 2 — The Staircase UP  (platforms climb y=-3 → y=8.5)
+        // ZONE 1 — Flat Launch (→ RIGHT, y=-3)
+        //   Long green floor, 2 speed pads, 1 BIG bounce at the end,
+        //   then a gap + small ledge so there's one tricky jump.
         // ════════════════════════════════════════════════════════
-        Mov("Mov_Z2entry", new Vector3(26, -1.5f, 0), new Vector3(3.2f, 0.4f, 1),
-            PLAT_Z2, PLAT_Z2T, 2.0f, false);
-        Plt("Plt_Z2a", new Vector3(31,   0.5f, 0), new Vector3(3.5f, 0.42f, 1), PLAT_Z2, PLAT_Z2T);
-        Plt("Plt_Z2b", new Vector3(37,   3.0f, 0), new Vector3(3.0f, 0.42f, 1), PLAT_Z2, PLAT_Z2T);
-        Spd("Spd_Z2b", new Vector3(37,   3.46f,0), new Vector3(2.5f, 0.22f, 1));
-        Plt("Plt_Z2c", new Vector3(43,   5.5f, 0), new Vector3(3.0f, 0.42f, 1), PLAT_Z2, PLAT_Z2T);
-        Mov("Mov_Z2top",new Vector3(48.5f,7.5f, 0), new Vector3(3.0f, 0.4f, 1),
-            PLAT_Z2, PLAT_Z2T, 2.5f, false);
-        // Elevated landing — top of staircase
-        Gnd("Gnd_Z2top", new Vector3(57, 8.5f, 0), new Vector3(12, 1, 1), Z2_GND);
-        Spd("Spd_Z2top", new Vector3(54.5f, 8.96f, 0), new Vector3(3.5f, 0.22f, 1));
-        CP("CP_2", new Vector3(57, 10, 0));
-        // Kill zone: falls during the Z2 ascent go to ground
-        Kz("KZ_Z2", new Vector3(40, -8f, 0), new Vector3(40f, 5f, 1));
+        Gnd("Gnd_Z1",  new Vector3(0,    -3, 0), new Vector3(30, 1, 1), Z1_GND);
+        Spd("Spd_Z1a", new Vector3(4,   -2.5f, 0), new Vector3(2.5f, 0.22f, 1));
+        Spd("Spd_Z1b", new Vector3(10,  -2.5f, 0), new Vector3(2.5f, 0.22f, 1));
+        Ice("Ice_Z1",  new Vector3(6.5f, -2.53f, 0), new Vector3(5f, 0.10f, 1)); // slippery mid-run
+        // Mega bounce at end of floor — launches player into Z2 staircase
+        Bnc("Bnc_Z1",  new Vector3(14,  -2.5f, 0), new Vector3(2.5f, 0.30f, 1));
+        // Gap x=16–20, small ledge + stepping stone up to Z2
+        Gnd("Gnd_Z1b", new Vector3(21.5f,-3, 0), new Vector3(3.5f, 1, 1), Z1_GND);
+        // Stepping stone — bridges Z1 floor (y=-3) to Z2 first platform (y=3.5)
+        // Reachable by normal jump from floor; Z2a reachable by normal jump from here
+        Plt("Plt_Z12step", new Vector3(22, 0.5f, 0), new Vector3(3f, 0.42f, 1),
+            new Color(0.18f, 0.62f, 0.18f), new Color(0.32f, 0.80f, 0.28f));
+        // Deco: grass tufts
+        Deco("Deco_Z1g0", new Vector3(-8, -2.35f, 0), new Vector3(0.22f, 0.45f, 1), new Color(0.22f,0.82f,0.18f,0.70f), 2);
+        Deco("Deco_Z1g1", new Vector3(-3, -2.32f, 0), new Vector3(0.18f, 0.40f, 1), new Color(0.18f,0.75f,0.16f,0.68f), 2);
+        Deco("Deco_Z1g2", new Vector3( 8, -2.30f, 0), new Vector3(0.20f, 0.42f, 1), new Color(0.20f,0.78f,0.17f,0.65f), 2);
+        CP("CP_1", new Vector3(12, -1, 0));
 
         // ════════════════════════════════════════════════════════
-        // ZONE 3 — Elevated Void  (at altitude y=8.5, 20-unit gap)
+        // ZONE 2 — Staircase UP (↑, x≈22–42, y: 3.5 → 22)
+        //   Six ascending platforms — each step is 3 units up,
+        //   4 units right. One moving platform near the top.
+        //   A wall at x=44 blocks further right — forces LEFT turn.
         // ════════════════════════════════════════════════════════
-        Gnd("Gnd_Z3a", new Vector3(66, 8.5f, 0), new Vector3(5, 1, 1), Z3_GND);
-        Wrn("Wrn_Z3",  new Vector3(68.2f, 8.82f, 0), new Vector3(0.5f, 0.30f, 1));
-        // *** BIG GAP: x=69 to x=89 (20 units!) at altitude ***
-        Kz("KZ_Z3",    new Vector3(79, 3f, 0), new Vector3(26f, 8f, 1));
-        Mov("Mov_Z3a",  new Vector3(72,   9.5f, 0), new Vector3(2.5f, 0.4f, 1),
-            PLAT_Z3, PLAT_Z3T, 2.8f, false);
-        Mov("Mov_Z3b",  new Vector3(77,  10.5f, 0), new Vector3(2.0f, 0.4f, 1),
-            PLAT_Z3, PLAT_Z3T, 3.5f, false);
-        Plt("Plt_Z3mid",new Vector3(81,   9.5f, 0), new Vector3(2.0f, 0.4f, 1),
-            PLAT_Z3, PLAT_Z3T);
-        Mov("Mov_Z3c",  new Vector3(85,  10.0f, 0), new Vector3(2.5f, 0.4f, 1),
-            PLAT_Z3, PLAT_Z3T, 2.2f, true);
-        Gnd("Gnd_Z3b",  new Vector3(93,   8.5f, 0), new Vector3(8, 1, 1), Z3_GND);
-        Bnc("Bnc_Z3",   new Vector3(91,   8.82f,0), new Vector3(2.5f, 0.30f, 1));
-        CP("CP_3", new Vector3(93, 10f, 0));
+        Plt("Plt_Z2a", new Vector3(23,  3.5f, 0), new Vector3(4f, 0.42f, 1), Pb2, Pt2);
+        Plt("Plt_Z2b", new Vector3(27,  6.5f, 0), new Vector3(4f, 0.42f, 1), Pb2, Pt2);
+        Spk("Spk_Z2b", new Vector3(27,  6.96f,0), new Vector3(2f, 0.18f, 1), 1.0f, 3.5f, 0.3f);
+        Plt("Plt_Z2c", new Vector3(31,  9.5f, 0), new Vector3(4f, 0.42f, 1), Pb2, Pt2);
+        Spd("Spd_Z2c", new Vector3(31,  9.96f,0), new Vector3(2.5f, 0.22f, 1));
+        Plt("Plt_Z2d", new Vector3(35, 12.5f, 0), new Vector3(4f, 0.42f, 1), Pb2, Pt2);
+        Ice("Ice_Z2d", new Vector3(35, 12.93f,0), new Vector3(3.8f, 0.10f, 1));
+        Plt("Plt_Z2e", new Vector3(38, 15.5f, 0), new Vector3(3.5f, 0.42f, 1), Pb2, Pt2);
+        Spk("Spk_Z2e", new Vector3(38, 15.96f,0), new Vector3(1.8f, 0.18f, 1), 1.0f, 3.5f, 0.6f);
+        Mov("Mov_Z2f", new Vector3(41, 18.5f, 0), new Vector3(3.5f, 0.40f, 1), Pb2, Pt2, 2.0f, false);
+        // Top landing pad — path continues LEFT from here
+        Gnd("Gnd_Z2top", new Vector3(36, 21.5f, 0), new Vector3(14, 1, 1), Z2_GND);
+        Cnv("Cnv_Z2", new Vector3(40, 22.05f, 0), new Vector3(6f, 0.15f, 1), -5f); // LEFT push — fight the belt!
+        // Wall barrier — blocks further right, forces players to turn left
+        Wll("Wll_Z2R", new Vector3(44.5f, 12, 0), new Vector3(0.8f, 24, 1));
+        CP("CP_2", new Vector3(38, 23, 0));
 
         // ════════════════════════════════════════════════════════
-        // ZONE 4 — Vertical Climb  (zigzag UP: y=8.5 → y=21)
-        //  Left platforms: Z4v1 (x≈100.5) and Z4v3 (x≈101)
-        //  Right platforms: Z4v2 (x≈107) and Z4v4 (x≈107.5)
-        //  Each step rises ~2.5 units — safely within single-jump reach
+        // ZONE 3 — Left Bridge (← LEFT, y≈22, x: 43 → -5)
+        //   Three platform segments separated by gaps.
+        //   Wind zone over first gap. Ice on last segment.
+        //   DashBoost mid-bridge. Kill zone below.
         // ════════════════════════════════════════════════════════
-        Kz("KZ_Z4", new Vector3(107, 5f, 0), new Vector3(22f, 8f, 1));
-        Plt("Plt_Z4v1", new Vector3(100.5f, 11.0f, 0), new Vector3(4f, 0.42f, 1), PLAT_Z4, PLAT_Z4T);
-        Plt("Plt_Z4v2", new Vector3(107.0f, 13.5f, 0), new Vector3(4f, 0.42f, 1), PLAT_Z4, PLAT_Z4T);
-        Plt("Plt_Z4v3", new Vector3(101.0f, 16.0f, 0), new Vector3(4f, 0.42f, 1), PLAT_Z4, PLAT_Z4T);
-        Plt("Plt_Z4v4", new Vector3(107.5f, 18.5f, 0), new Vector3(4f, 0.42f, 1), PLAT_Z4, PLAT_Z4T);
-        Gnd("Gnd_Z4top",new Vector3(106f,  21.0f, 0), new Vector3(14, 1, 1), Z4_GND);
-        CP("CP_4", new Vector3(110, 22f, 0));
+        // Gap 1: x≈29 to x≈25 — wind helps
+        Wnd("Wnd_Z3a", new Vector3(27, 24.5f, 0), new Vector3(3f, 5.5f, 1));
+        Plt("Plt_Z3a",  new Vector3(21, 22, 0), new Vector3(8f, 0.42f, 1), Pb3, Pt3);
+        // Gap 2: x≈17 to x≈12
+        Plt("Plt_Z3b",  new Vector3(9,  22, 0), new Vector3(8f, 0.42f, 1), Pb3, Pt3);
+        Dsh("Dsh_Z3",   new Vector3(9, 23.4f, 0)); // DashBoost mid-bridge
+        // Gap 3: x≈5 to x≈0
+        Plt("Plt_Z3c",  new Vector3(-4, 22, 0), new Vector3(6f, 0.42f, 1), Pb3, Pt3);
+        Ice("Ice_Z3c",  new Vector3(-4, 22.43f, 0), new Vector3(5.5f, 0.10f, 1));
+        CP("CP_3", new Vector3(8, 23, 0));
 
         // ════════════════════════════════════════════════════════
-        // ZONE 5 — Sky Highway  (tight platforms at y=20.5–21)
+        // ZONE 4 — Second Climb (↑, x: -7 to +7, y: 22 → 47)
+        //   Wall-jump surfaces on left and right.
+        //   Six stepping platforms zigzag up.
+        //   Wind column mid-climb. Ice & spikes on platforms.
+        //   DashBoost near top.
         // ════════════════════════════════════════════════════════
-        Kz("KZ_Z5", new Vector3(137, 10f, 0), new Vector3(50f, 10f, 1));
-        Plt("Plt_Z5a",  new Vector3(119.5f, 20.5f, 0), new Vector3(5.0f, 0.42f, 1), PLAT_Z4, PLAT_Z4T);
-        Mov("Mov_Z5a",  new Vector3(125.0f, 20.5f, 0), new Vector3(2.5f, 0.4f,  1),
-            PLAT_Z4, PLAT_Z4T, 2.0f, false);
-        Plt("Plt_Z5b",  new Vector3(129.5f, 21.0f, 0), new Vector3(3.0f, 0.42f, 1), PLAT_Z4, PLAT_Z4T);
-        Plt("Plt_Z5c",  new Vector3(134.5f, 20.5f, 0), new Vector3(4.0f, 0.42f, 1), PLAT_Z4, PLAT_Z4T);
-        Spd("Spd_Z5a",  new Vector3(134.5f, 20.96f,0), new Vector3(3.5f, 0.22f, 1));
-        Mov("Mov_Z5b",  new Vector3(139.5f, 21.0f, 0), new Vector3(2.5f, 0.4f,  1),
-            PLAT_Z4, PLAT_Z4T, 1.8f, true);
-        Plt("Plt_Z5d",  new Vector3(144.0f, 21.0f, 0), new Vector3(4.0f, 0.42f, 1), PLAT_Z4, PLAT_Z4T);
-        Bnc("Bnc_Z5",   new Vector3(145.0f, 21.32f,0), new Vector3(2.5f, 0.30f, 1));
-        Gnd("Gnd_Z5end",new Vector3(153.0f, 20.5f, 0), new Vector3(8, 1, 1), Z5_GND);
-        Spd("Spd_Z5b",  new Vector3(152.0f, 20.96f,0), new Vector3(3.5f, 0.22f, 1));
-        CP("CP_5", new Vector3(155, 22f, 0));
+        // Walls bottom raised to y=23.5 (above Z3 bridge at y=22) so players can
+        // walk on Plt_Z3c (x=-7 to -1) without hitting the wall edge.
+        Wll("Wll_Z4L", new Vector3(-6, 37f, 0), new Vector3(0.8f, 27f, 1));
+        Wll("Wll_Z4R", new Vector3( 6, 37f, 0), new Vector3(0.8f, 27f, 1));
+        Plt("Plt_Z4a", new Vector3(-1.5f, 25.5f,0), new Vector3(4f, 0.42f, 1), Pb4, Pt4);
+        Plt("Plt_Z4b", new Vector3( 2,   28.5f, 0), new Vector3(4f, 0.42f, 1), Pb4, Pt4);
+        Spk("Spk_Z4b", new Vector3( 2,   28.96f,0), new Vector3(2.2f,0.18f,1), 1.0f,3.5f,0.2f);
+        Plt("Plt_Z4c", new Vector3(-1.5f, 31.5f,0), new Vector3(4f, 0.42f, 1), Pb4, Pt4);
+        Wnd("Wnd_Z4",  new Vector3( 0,   35.5f, 0), new Vector3(6f, 5.5f, 1)); // uplift column
+        Plt("Plt_Z4d", new Vector3( 2,   36f,   0), new Vector3(4f, 0.42f, 1), Pb4, Pt4);
+        Ice("Ice_Z4d", new Vector3( 2,   36.43f,0), new Vector3(3.8f,0.10f, 1));
+        Plt("Plt_Z4e", new Vector3(-1.5f, 39.5f,0), new Vector3(4f, 0.42f, 1), Pb4, Pt4);
+        Dsh("Dsh_Z4",  new Vector3(-1.5f, 41f,  0)); // DashBoost — reward near top
+        Lgz("Lgz_Z4",  new Vector3( 0,   42.5f, 0), new Vector3(14f, 9f,   1)); // floaty upper climb
+        Plt("Plt_Z4f", new Vector3( 2,   43.5f, 0), new Vector3(4f, 0.42f, 1), Pb4, Pt4);
+        Plt("Plt_Z4g", new Vector3(-1.5f, 46.5f,0), new Vector3(4f, 0.42f, 1), Pb4, Pt4);
+        CP("CP_4", new Vector3(0, 48, 0));
 
         // ════════════════════════════════════════════════════════
-        // ZONE 6 — Final Descent  (y=20.5 → y=-3, crimson staircase)
-        //  Three descending platforms then a flat ground sprint to finish
+        // ZONE 5 — Sky Highway (→ RIGHT, y≈46.5, x: 5 → 58)
+        //   Entry landing pad, then 5 platform segments going right.
+        //   Speed pads, spikes, 1 moving platform, 1 wind zone.
         // ════════════════════════════════════════════════════════
-        Kz("KZ_Z6", new Vector3(175f, -6f, 0), new Vector3(38f, 5f, 1));
-        Plt("Plt_Z6a",  new Vector3(161.0f, 16.0f, 0), new Vector3(6f, 0.42f, 1), PLAT_Z6, PLAT_Z6T);
-        Spd("Spd_Z6a",  new Vector3(161.0f, 16.46f,0), new Vector3(5f, 0.22f, 1));
-        Plt("Plt_Z6b",  new Vector3(169.5f, 11.0f, 0), new Vector3(5f, 0.42f, 1), PLAT_Z6, PLAT_Z6T);
-        Spd("Spd_Z6b",  new Vector3(169.5f, 11.46f,0), new Vector3(4f, 0.22f, 1));
-        Plt("Plt_Z6c",  new Vector3(176.5f,  6.0f, 0), new Vector3(5f, 0.42f, 1), PLAT_Z6, PLAT_Z6T);
-        Spd("Spd_Z6c",  new Vector3(176.5f,  6.46f,0), new Vector3(4f, 0.22f, 1));
-        Gnd("Gnd_Z6",   new Vector3(186.0f, -3.0f, 0), new Vector3(14, 1, 1), Z6_GND);
-        Spd("Spd_Z6d",  new Vector3(183.5f, -2.65f,0), new Vector3(3.5f, 0.22f, 1));
-        Spd("Spd_Z6e",  new Vector3(187.5f, -2.65f,0), new Vector3(3.5f, 0.22f, 1));
+        Gnd("Gnd_Z5entry", new Vector3(6.5f, 46.5f, 0), new Vector3(7f, 0.8f, 1), Z4_GND);
+        // Gap → Plt_Z5a
+        Plt("Plt_Z5a", new Vector3(15, 46.5f, 0), new Vector3(5f, 0.42f, 1), Pb4, Pt4);
+        Spd("Spd_Z5a", new Vector3(15, 46.96f,0), new Vector3(3.5f,0.22f, 1));
+        // Gap → Plt_Z5b — CRUMBLING (risky, spikes above)
+        Crm("Plt_Z5b", new Vector3(24, 46.5f, 0), new Vector3(5f, 0.42f, 1), Pb4, Pt4);
+        Spk("Spk_Z5b", new Vector3(24, 46.96f,0), new Vector3(2.5f,0.18f,1), 1.0f,3.5f,0.4f);
+        Dsh("Dsh_Z5",  new Vector3(24, 48.0f, 0)); // DashBoost mid-sky
+        // Moving platform gap
+        Mov("Mov_Z5c", new Vector3(31, 46.5f, 0), new Vector3(3.5f,0.40f, 1), Pb4, Pt4, 2.2f, false);
+        // Gap → Plt_Z5d
+        Plt("Plt_Z5d", new Vector3(39, 46.5f, 0), new Vector3(5f, 0.42f, 1), Pb4, Pt4);
+        Spd("Spd_Z5d", new Vector3(39, 46.96f,0), new Vector3(3.5f,0.22f, 1));
+        Wnd("Wnd_Z5",  new Vector3(42.5f,49f,  0), new Vector3(2.5f,4f,   1)); // rescue wind
+        // Gap → Plt_Z5e (vertical moving)
+        Mov("Mov_Z5e", new Vector3(47, 46.5f, 0), new Vector3(3.5f,0.40f, 1), Pb4, Pt4, 1.8f, true);
+        // Gap → final ground
+        Gnd("Gnd_Z5end", new Vector3(55, 46.5f, 0), new Vector3(8f, 0.8f, 1), Z5_GND);
+        Spd("Spd_Z5end", new Vector3(54, 46.96f,0), new Vector3(4f, 0.22f, 1));
+        Tpt("Tpt_Z5",    new Vector3(58, 46.88f, 0), new Vector3(79f, 11.5f, 0)); // shortcut → Z6 bottom
+        CP("CP_5", new Vector3(55, 48, 0));
 
-        // Finish line — tall enough to catch players at all y levels
+        // ════════════════════════════════════════════════════════
+        // ZONE 6 — Descent (↓, x: 57 → 77, y: 46 → 10)
+        //   Four platforms zigzag down — each drops 6 units.
+        //   Bounce pad near bottom to redirect player right.
+        // ════════════════════════════════════════════════════════
+        Crm("Plt_Z6a",  new Vector3(61, 40, 0), new Vector3(4.5f,0.42f, 1), Pb6, Pt6); // crumbles!
+        Plt("Plt_Z6b",  new Vector3(65, 34, 0), new Vector3(4.5f,0.42f, 1), Pb6, Pt6);
+        Spk("Spk_Z6b", new Vector3(65, 34.46f,0), new Vector3(2f, 0.18f, 1), 1.0f,3.5f,0.0f);
+        Plt("Plt_Z6c", new Vector3(70, 28, 0), new Vector3(4.5f,0.42f, 1), Pb6, Pt6);
+        Plt("Plt_Z6d", new Vector3(74, 22, 0), new Vector3(4.5f,0.42f, 1), Pb6, Pt6);
+        Bnc("Bnc_Z6",  new Vector3(73, 22.32f,0), new Vector3(2.5f,0.30f, 1)); // redirects right
+        Gnd("Gnd_Z6",  new Vector3(78, 10, 0), new Vector3(10f, 1, 1), Z6_GND);
+        CP("CP_6", new Vector3(77, 11.5f, 0));
+
+        // ════════════════════════════════════════════════════════
+        // ZONE 7 — Final Sprint + UP climb (→ RIGHT then ↑, x: 80–96, y: 10–28)
+        //   Speed pads on sprint floor.
+        //   Three ascending platforms with spikes.
+        //   High finish platform.
+        // ════════════════════════════════════════════════════════
+        Gnd("Gnd_Z7", new Vector3(84, 10, 0), new Vector3(10f, 1, 1), Z5_GND);
+        Spd("Spd_Z7a", new Vector3(81, 10.5f, 0), new Vector3(2.5f,0.22f, 1));
+        Spd("Spd_Z7b", new Vector3(85, 10.5f, 0), new Vector3(2.5f,0.22f, 1));
+        Spk("Spk_Z7",  new Vector3(83, 10.96f,0), new Vector3(2f, 0.18f, 1), 1.0f,3.5f,0.1f);
+        // Three rising platforms going UP
+        Plt("Plt_Z7a", new Vector3(84, 14, 0), new Vector3(4f, 0.42f, 1), Pb4, Pt4);
+        Plt("Plt_Z7b", new Vector3(79, 18, 0), new Vector3(4f, 0.42f, 1), Pb4, Pt4); // slight left — twist
+        Plt("Plt_Z7c", new Vector3(84, 22, 0), new Vector3(4f, 0.42f, 1), Pb4, Pt4);
+        // Final high platform — FINISH is here
+        Gnd("Gnd_Z7top", new Vector3(90, 26, 0), new Vector3(10f, 1, 1), Z4_GND);
+        Ice("Ice_Z7top", new Vector3(90, 26.47f,0), new Vector3(9f, 0.10f, 1)); // dramatic icy finish
+        Spd("Spd_Z7top", new Vector3(88, 26.5f, 0), new Vector3(3f, 0.22f, 1));
+
+        // ── Finish line (tall trigger at x=96, spans y=-10 to +38) ───────
         var fl = new GameObject("Fin");
-        fl.transform.position   = new Vector3(192f, 0, 0);
-        fl.transform.localScale = new Vector3(0.5f, 12f, 1f);
+        fl.transform.position   = new Vector3(96f, 14, 0);
+        fl.transform.localScale = new Vector3(0.5f, 28f, 1f);
+        if (_trackParent != null) fl.transform.SetParent(_trackParent, true);
         fl.AddComponent<SpriteRenderer>().sprite = MakeChecker();
         fl.GetComponent<SpriteRenderer>().sortingOrder = 3;
         var flc = fl.AddComponent<BoxCollider2D>();
         flc.isTrigger = true;
         fl.AddComponent<FinishLine>();
+
+        // ── Wide floor after finish — players land here instead of falling ──
+        Gnd("Gnd_FinFloor", new Vector3(103f, 26f, 0), new Vector3(18f, 1f, 1), Z4_GND);
+
+        // Kill zones auto-calculated from actual geometry bounds + padding
+        BuildBoundaryKillZones(_container0, "KZ_", 18f);
     }
 
     // ── Waypoints ──────────────────────────────────────────────
+    // Mirrors the non-linear path: right→up→left→up→right→down→up→finish
     static void BuildWaypoints()
     {
         var go = new GameObject("Waypoints");
+        if (_container0 != null) go.transform.SetParent(_container0.transform, true);
         var wp = go.AddComponent<WaypointPath>();
         wp.points = new Vector3[]
         {
-            // Z1 — flat ground y=-3
-            new Vector3(-12,    -2,    0),
-            new Vector3( -4,    -2,    0),
-            new Vector3(  4,     0.5f, 0), // jump over gap 1
-            new Vector3(  9,    -2,    0),
-            new Vector3( 14,     0.5f, 0), // jump over gap 2
-            new Vector3( 20,    -2,    0),
+            // Z1 — flat sprint right (y=-3)
+            new Vector3(-12,  -2,    0),
+            new Vector3( -5,  -2,    0),
+            new Vector3(  4,  -2,    0),   // speed pads
+            new Vector3( 10,  -2,    0),
+            new Vector3( 14,   0,    0),   // at bounce pad
+            new Vector3( 21,  -2,    0),   // small ledge after gap
 
-            // Z2 — ascending staircase (y=-3 → y=8.5)
-            new Vector3( 26,    -1.1f, 0), // Mov_Z2entry
-            new Vector3( 31,     0.9f, 0), // Plt_Z2a
-            new Vector3( 37,     3.4f, 0), // Plt_Z2b
-            new Vector3( 43,     5.9f, 0), // Plt_Z2c
-            new Vector3( 48.5f,  7.9f, 0), // Mov_Z2top
-            new Vector3( 56,     9.0f, 0), // Gnd_Z2top (y=8.5)
+            // Z2 — staircase UP (right + rising)
+            new Vector3( 23,   4.0f, 0),   // Plt_Z2a
+            new Vector3( 27,   7.0f, 0),   // Plt_Z2b
+            new Vector3( 31,  10.0f, 0),   // Plt_Z2c
+            new Vector3( 35,  13.0f, 0),   // Plt_Z2d
+            new Vector3( 38,  16.0f, 0),   // Plt_Z2e
+            new Vector3( 41,  19.0f, 0),   // Mov_Z2f
+            new Vector3( 36,  22.0f, 0),   // Gnd_Z2top
 
-            // Z3 — elevated void crossing (altitude y=8.5)
-            new Vector3( 65,     9.0f, 0), // Z3 ledge approach
-            new Vector3( 72,    10.0f, 0), // Mov_Z3a
-            new Vector3( 77,    11.0f, 0), // Mov_Z3b
-            new Vector3( 81,    10.0f, 0), // Plt_Z3mid
-            new Vector3( 85,    10.4f, 0), // Mov_Z3c (vertical)
-            new Vector3( 92,     9.0f, 0), // Gnd_Z3b landing
+            // Z3 — bridge going LEFT (y≈22)
+            new Vector3( 21,  22.5f, 0),   // Plt_Z3a
+            new Vector3(  9,  22.5f, 0),   // Plt_Z3b
+            new Vector3( -4,  22.5f, 0),   // Plt_Z3c (left end)
 
-            // Z4 — vertical climb (y=8.5 → y=21), zigzag left/right
-            new Vector3(100.5f, 11.4f, 0), // Plt_Z4v1 (left)
-            new Vector3(107.0f, 13.9f, 0), // Plt_Z4v2 (right)
-            new Vector3(101.0f, 16.4f, 0), // Plt_Z4v3 (left)
-            new Vector3(107.5f, 18.9f, 0), // Plt_Z4v4 (right)
-            new Vector3(106.0f, 21.4f, 0), // Gnd_Z4top
+            // Z4 — zigzag climb UP
+            new Vector3(-1.5f, 26.0f, 0),  // Plt_Z4a
+            new Vector3( 2,    29.0f, 0),  // Plt_Z4b
+            new Vector3(-1.5f, 32.0f, 0),  // Plt_Z4c
+            new Vector3( 2,    36.5f, 0),  // Plt_Z4d
+            new Vector3(-1.5f, 40.0f, 0),  // Plt_Z4e
+            new Vector3( 2,    44.0f, 0),  // Plt_Z4f
+            new Vector3(-1.5f, 47.0f, 0),  // Plt_Z4g (top)
 
-            // Z5 — sky highway (y=20.5–21)
-            new Vector3(119.5f, 21.0f, 0), // Plt_Z5a
-            new Vector3(125.0f, 21.0f, 0), // Mov_Z5a
-            new Vector3(129.5f, 21.4f, 0), // Plt_Z5b
-            new Vector3(134.5f, 21.0f, 0), // Plt_Z5c
-            new Vector3(139.5f, 21.4f, 0), // Mov_Z5b
-            new Vector3(144.0f, 21.4f, 0), // Plt_Z5d
-            new Vector3(153.0f, 21.0f, 0), // Gnd_Z5end
+            // Z5 — sky highway RIGHT (y≈46.5)
+            new Vector3( 6.5f, 47.3f, 0),  // Gnd_Z5entry
+            new Vector3( 15,   47.0f, 0),  // Plt_Z5a
+            new Vector3( 24,   47.0f, 0),  // Plt_Z5b
+            new Vector3( 31,   47.0f, 0),  // Mov_Z5c
+            new Vector3( 39,   47.0f, 0),  // Plt_Z5d
+            new Vector3( 47,   47.0f, 0),  // Mov_Z5e
+            new Vector3( 55,   47.3f, 0),  // Gnd_Z5end
 
-            // Z6 — descent (y=20.5 → y=-3) + final sprint
-            new Vector3(161.0f, 16.4f, 0), // Plt_Z6a
-            new Vector3(169.5f, 11.4f, 0), // Plt_Z6b
-            new Vector3(176.5f,  6.4f, 0), // Plt_Z6c
-            new Vector3(184.0f, -2.0f, 0), // Gnd_Z6
-            new Vector3(190.0f, -2.0f, 0), // near finish
-            new Vector3(192.0f, -2.0f, 0), // finish line
+            // Z6 — zigzag descent DOWN
+            new Vector3( 61,   40.5f, 0),  // Plt_Z6a
+            new Vector3( 65,   34.5f, 0),  // Plt_Z6b
+            new Vector3( 70,   28.5f, 0),  // Plt_Z6c
+            new Vector3( 74,   22.5f, 0),  // Plt_Z6d
+            new Vector3( 78,   10.5f, 0),  // Gnd_Z6
+
+            // Z7 — final sprint right then climb UP
+            new Vector3( 81,   10.5f, 0),  // Gnd_Z7 sprint
+            new Vector3( 85,   10.5f, 0),
+            new Vector3( 84,   14.5f, 0),  // Plt_Z7a
+            new Vector3( 79,   18.5f, 0),  // Plt_Z7b (left twist)
+            new Vector3( 84,   22.5f, 0),  // Plt_Z7c
+            new Vector3( 90,   26.5f, 0),  // Gnd_Z7top
+            new Vector3( 96,   26.5f, 0),  // finish line
+        };
+    }
+
+    // ── TRACK MAP 1 — Volcano Rush ──────────────────────────────
+    // Same non-linear layout as Map 0 but shifted +55 Y and volcanic colors.
+    static void BuildTrack1()
+    {
+        const float Y = 55f; // vertical offset from map 0
+
+        // Volcano palette
+        Color vZ1  = new Color(0.52f, 0.14f, 0.08f);
+        Color vZ2  = new Color(0.48f, 0.18f, 0.06f);
+        Color vZ3  = new Color(0.40f, 0.10f, 0.06f);
+        Color vZ4  = new Color(0.36f, 0.08f, 0.26f);
+        Color vZ5  = new Color(0.55f, 0.20f, 0.05f);
+        Color vZ6  = new Color(0.60f, 0.10f, 0.05f);
+        Color vPb  = new Color(0.45f, 0.18f, 0.08f);
+        Color vPt  = new Color(0.75f, 0.35f, 0.10f);
+        Color vPb4 = new Color(0.30f, 0.08f, 0.20f);
+        Color vPt4 = new Color(0.55f, 0.22f, 0.45f);
+        Color vPb6 = new Color(0.45f, 0.08f, 0.08f);
+        Color vPt6 = new Color(0.72f, 0.24f, 0.12f);
+
+        var container = new GameObject("MapContainer_1");
+        _container1 = container;
+        _trackParent = container.transform;
+
+        // Z1 — Lava Launch (→ RIGHT)
+        Gnd("Gnd_V1",  new Vector3(0,    -3+Y, 0), new Vector3(30, 1, 1), vZ1);
+        Spd("Spd_V1a", new Vector3(4,   -2.5f+Y,0), new Vector3(2.5f, 0.22f, 1));
+        Spd("Spd_V1b", new Vector3(10,  -2.5f+Y,0), new Vector3(2.5f, 0.22f, 1));
+        Ice("Ice_V1",  new Vector3(6.5f,-2.53f+Y,0), new Vector3(5f, 0.10f, 1)); // cooled lava crust
+        Bnc("Bnc_V1",  new Vector3(14,  -2.5f+Y,0), new Vector3(2.5f, 0.30f, 1));
+        Gnd("Gnd_V1b", new Vector3(21.5f,-3+Y,  0), new Vector3(3.5f, 1, 1), vZ1);
+        // Stepping stone — same purpose as Map 0 (bridges floor to Z2 staircase entry)
+        Plt("Plt_V12step", new Vector3(22, 0.5f+Y, 0), new Vector3(3f, 0.42f, 1), vPb, vPt);
+        Deco("Deco_V1e0", new Vector3(-8, -2.38f+Y,0), new Vector3(0.28f,0.28f,1), new Color(0.85f,0.28f,0.05f,0.65f), 2);
+        Deco("Deco_V1e1", new Vector3(-3, -2.40f+Y,0), new Vector3(0.22f,0.22f,1), new Color(0.90f,0.40f,0.06f,0.60f), 2);
+        Deco("Deco_V1e2", new Vector3( 8, -2.38f+Y,0), new Vector3(0.24f,0.24f,1), new Color(0.80f,0.22f,0.04f,0.68f), 2);
+        CP("CP_V1",    new Vector3(12,   0+Y,    0));
+
+        // Z2 — Lava Staircase (↑ UP)
+        Plt("Plt_V2a", new Vector3(23,  3.5f+Y, 0), new Vector3(4f, 0.42f, 1), vPb, vPt);
+        Plt("Plt_V2b", new Vector3(27,  6.5f+Y, 0), new Vector3(4f, 0.42f, 1), vPb, vPt);
+        Spk("Spk_V2b", new Vector3(27,  6.96f+Y,0), new Vector3(2f, 0.18f, 1), 1.0f,3.5f,0.3f);
+        Plt("Plt_V2c", new Vector3(31,  9.5f+Y, 0), new Vector3(4f, 0.42f, 1), vPb, vPt);
+        Spd("Spd_V2c", new Vector3(31,  9.96f+Y,0), new Vector3(2.5f,0.22f, 1));
+        Plt("Plt_V2d", new Vector3(35, 12.5f+Y, 0), new Vector3(4f, 0.42f, 1), vPb, vPt);
+        Ice("Ice_V2d", new Vector3(35, 12.93f+Y,0), new Vector3(3.8f,0.10f, 1)); // obsidian crust
+        Plt("Plt_V2e", new Vector3(38, 15.5f+Y, 0), new Vector3(3.5f,0.42f, 1), vPb, vPt);
+        Spk("Spk_V2e", new Vector3(38, 15.96f+Y,0), new Vector3(1.8f,0.18f, 1), 1.0f,3.5f,0.6f);
+        Mov("Mov_V2f", new Vector3(41, 18.5f+Y, 0), new Vector3(3.5f,0.40f, 1), vPb, vPt, 2.0f, false);
+        Gnd("Gnd_V2top", new Vector3(36, 21.5f+Y,0), new Vector3(14, 1, 1), vZ2);
+        Cnv("Cnv_V2",    new Vector3(40, 22.05f+Y,0), new Vector3(6f, 0.15f, 1), -5f); // LEFT push
+        Wll("Wll_V2R", new Vector3(44.5f,12+Y,  0), new Vector3(0.8f,24, 1));
+        CP("CP_V2",    new Vector3(38,   23+Y,   0));
+
+        // Z3 — Bridge of Magma (← LEFT)
+        Wnd("Wnd_V3a", new Vector3(27, 24.5f+Y, 0), new Vector3(3f, 5.5f, 1)); // steam vent
+        Plt("Plt_V3a", new Vector3(21, 22+Y,    0), new Vector3(8f, 0.42f, 1), vPb, vPt);
+        Plt("Plt_V3b", new Vector3( 9, 22+Y,    0), new Vector3(8f, 0.42f, 1), vPb, vPt);
+        Dsh("Dsh_V3",  new Vector3( 9, 23.4f+Y, 0));
+        Plt("Plt_V3c", new Vector3(-4, 22+Y,    0), new Vector3(6f, 0.42f, 1), vPb, vPt);
+        Ice("Ice_V3c", new Vector3(-4, 22.43f+Y,0), new Vector3(5.5f,0.10f, 1)); // cooled lava
+        CP("CP_V3",    new Vector3( 8, 23+Y,    0));
+
+        // Z4 — Volcanic Climb (↑ UP)
+        // Walls bottom raised to y=23.5+Y (above Z3 bridge at y=22+Y).
+        Wll("Wll_V4L", new Vector3(-6, 37f+Y,   0), new Vector3(0.8f, 27f, 1));
+        Wll("Wll_V4R", new Vector3( 6, 37f+Y,   0), new Vector3(0.8f, 27f, 1));
+        Plt("Plt_V4a", new Vector3(-1.5f,25.5f+Y,0), new Vector3(4f, 0.42f, 1), vPb4, vPt4);
+        Plt("Plt_V4b", new Vector3( 2,  28.5f+Y, 0), new Vector3(4f, 0.42f, 1), vPb4, vPt4);
+        Spk("Spk_V4b", new Vector3( 2,  28.96f+Y,0), new Vector3(2.2f,0.18f,1), 1.0f,3.5f,0.2f);
+        Plt("Plt_V4c", new Vector3(-1.5f,31.5f+Y,0), new Vector3(4f, 0.42f, 1), vPb4, vPt4);
+        Wnd("Wnd_V4",  new Vector3( 0,  35.5f+Y, 0), new Vector3(6f, 5.5f, 1)); // volcanic updraft
+        Plt("Plt_V4d", new Vector3( 2,  36+Y,    0), new Vector3(4f, 0.42f, 1), vPb4, vPt4);
+        Ice("Ice_V4d", new Vector3( 2,  36.43f+Y,0), new Vector3(3.8f,0.10f,1));
+        Plt("Plt_V4e", new Vector3(-1.5f,39.5f+Y,0), new Vector3(4f, 0.42f, 1), vPb4, vPt4);
+        Dsh("Dsh_V4",  new Vector3(-1.5f,41+Y,   0));
+        Lgz("Lgz_V4",  new Vector3( 0,  42.5f+Y, 0), new Vector3(14f, 9f,   1)); // low-grav upper climb
+        Plt("Plt_V4f", new Vector3( 2,  43.5f+Y, 0), new Vector3(4f, 0.42f, 1), vPb4, vPt4);
+        Plt("Plt_V4g", new Vector3(-1.5f,46.5f+Y,0), new Vector3(4f, 0.42f, 1), vPb4, vPt4);
+        CP("CP_V4",    new Vector3(0,   48+Y,    0));
+
+        // Z5 — Lava Highway (→ RIGHT, y≈46.5)
+        Gnd("Gnd_V5entry", new Vector3(6.5f,46.5f+Y,0), new Vector3(7f, 0.8f, 1), vZ4);
+        Plt("Plt_V5a", new Vector3(15, 46.5f+Y, 0), new Vector3(5f, 0.42f, 1), vPb4, vPt4);
+        Spd("Spd_V5a", new Vector3(15, 46.96f+Y,0), new Vector3(3.5f,0.22f, 1));
+        Crm("Plt_V5b", new Vector3(24, 46.5f+Y, 0), new Vector3(5f, 0.42f, 1), vPb4, vPt4); // crumbles!
+        Spk("Spk_V5b", new Vector3(24, 46.96f+Y,0), new Vector3(2.5f,0.18f,1), 1.0f,3.5f,0.4f);
+        Dsh("Dsh_V5",  new Vector3(24, 48+Y,    0));
+        Mov("Mov_V5c", new Vector3(31, 46.5f+Y, 0), new Vector3(3.5f,0.40f, 1), vPb4, vPt4, 2.2f, false);
+        Plt("Plt_V5d", new Vector3(39, 46.5f+Y, 0), new Vector3(5f, 0.42f, 1), vPb4, vPt4);
+        Spd("Spd_V5d", new Vector3(39, 46.96f+Y,0), new Vector3(3.5f,0.22f, 1));
+        Wnd("Wnd_V5",  new Vector3(42.5f,49+Y,  0), new Vector3(2.5f,4f,   1)); // rescue updraft
+        Mov("Mov_V5e", new Vector3(47, 46.5f+Y, 0), new Vector3(3.5f,0.40f, 1), vPb4, vPt4, 1.8f, true);
+        Gnd("Gnd_V5end", new Vector3(55, 46.5f+Y,0), new Vector3(8f, 0.8f, 1), vZ5);
+        Spd("Spd_V5end", new Vector3(54, 46.96f+Y,0), new Vector3(4f,0.22f, 1));
+        Tpt("Tpt_V5",    new Vector3(58, 46.88f+Y, 0), new Vector3(79f, 11.5f+Y, 0)); // shortcut → Z6
+        CP("CP_V5",    new Vector3(55, 48+Y,    0));
+
+        // Z6 — Lava Fall (↓ DOWN)
+        Crm("Plt_V6a",  new Vector3(61, 40+Y,   0), new Vector3(4.5f,0.42f, 1), vPb6, vPt6); // crumbles!
+        Plt("Plt_V6b", new Vector3(65, 34+Y,   0), new Vector3(4.5f,0.42f, 1), vPb6, vPt6);
+        Spk("Spk_V6b", new Vector3(65, 34.46f+Y,0), new Vector3(2f, 0.18f, 1), 1.0f,3.5f,0.0f);
+        Plt("Plt_V6c", new Vector3(70, 28+Y,   0), new Vector3(4.5f,0.42f, 1), vPb6, vPt6);
+        Plt("Plt_V6d", new Vector3(74, 22+Y,   0), new Vector3(4.5f,0.42f, 1), vPb6, vPt6);
+        Bnc("Bnc_V6",  new Vector3(73, 22.32f+Y,0), new Vector3(2.5f,0.30f, 1));
+        Gnd("Gnd_V6",  new Vector3(78, 10+Y,   0), new Vector3(10f, 1, 1), vZ6);
+        CP("CP_V6",    new Vector3(77, 11.5f+Y, 0));
+
+        // Z7 — Crimson Sprint (→ RIGHT + ↑ UP to FINISH)
+        Gnd("Gnd_V7",  new Vector3(84, 10+Y,   0), new Vector3(10f, 1, 1), vZ6);
+        Spd("Spd_V7a", new Vector3(81, 10.5f+Y,0), new Vector3(2.5f,0.22f, 1));
+        Spd("Spd_V7b", new Vector3(85, 10.5f+Y,0), new Vector3(2.5f,0.22f, 1));
+        Spk("Spk_V7",  new Vector3(83, 10.96f+Y,0), new Vector3(2f, 0.18f, 1), 1.0f,3.5f,0.1f);
+        Plt("Plt_V7a", new Vector3(84, 14+Y,   0), new Vector3(4f, 0.42f, 1), vPb6, vPt6);
+        Plt("Plt_V7b", new Vector3(79, 18+Y,   0), new Vector3(4f, 0.42f, 1), vPb6, vPt6);
+        Plt("Plt_V7c", new Vector3(84, 22+Y,   0), new Vector3(4f, 0.42f, 1), vPb6, vPt6);
+        Gnd("Gnd_V7top", new Vector3(90,26+Y,  0), new Vector3(10f, 1, 1), vZ4);
+        Ice("Ice_V7top", new Vector3(90,26.47f+Y,0), new Vector3(9f, 0.10f, 1));
+        Spd("Spd_V7top", new Vector3(88,26.5f+Y,0), new Vector3(3f, 0.22f, 1));
+
+        // Finish line
+        var fl1 = new GameObject("Fin");
+        fl1.transform.position   = new Vector3(96f, 14+Y, 0);
+        fl1.transform.localScale = new Vector3(0.5f, 28f, 1f);
+        fl1.transform.SetParent(_trackParent, true);
+        fl1.AddComponent<SpriteRenderer>().sprite = MakeChecker();
+        fl1.GetComponent<SpriteRenderer>().sortingOrder = 3;
+        var fl1c = fl1.AddComponent<BoxCollider2D>();
+        fl1c.isTrigger = true;
+        fl1.AddComponent<FinishLine>();
+
+        // ── Wide floor after finish (Map 1) ───────────────────────────────
+        Gnd("Gnd_FinFloor", new Vector3(103f, 26f + Y, 0), new Vector3(18f, 1f, 1), Z4_GND);
+
+        // Kill zones auto-calculated from actual geometry bounds + padding
+        BuildBoundaryKillZones(_container1, "KZ_V_", 18f);
+
+        _trackParent = null;
+    }
+
+    // ── Waypoints for Map 1 (Volcano Rush) — mirrors Map 0 + Y offset ──
+    static void BuildWaypoints1()
+    {
+        const float Y = 55f;
+        var go = new GameObject("Waypoints1");
+        if (_container1 != null) go.transform.SetParent(_container1.transform, true);
+        var wp = go.AddComponent<WaypointPath>();
+        wp.points = new Vector3[]
+        {
+            new Vector3(-12,  -2+Y,    0), new Vector3( -5,  -2+Y,    0),
+            new Vector3(  4,  -2+Y,    0), new Vector3( 10,  -2+Y,    0),
+            new Vector3( 14,   0+Y,    0), new Vector3( 21,  -2+Y,    0),
+            new Vector3( 23,   4+Y,    0), new Vector3( 27,   7+Y,    0),
+            new Vector3( 31,  10+Y,    0), new Vector3( 35,  13+Y,    0),
+            new Vector3( 38,  16+Y,    0), new Vector3( 41,  19+Y,    0),
+            new Vector3( 36,  22+Y,    0), new Vector3( 21,  22.5f+Y, 0),
+            new Vector3(  9,  22.5f+Y, 0), new Vector3( -4,  22.5f+Y, 0),
+            new Vector3(-1.5f,26+Y,    0), new Vector3(  2,  29+Y,    0),
+            new Vector3(-1.5f,32+Y,    0), new Vector3(  2,  36.5f+Y, 0),
+            new Vector3(-1.5f,40+Y,    0), new Vector3(  2,  44+Y,    0),
+            new Vector3(-1.5f,47+Y,    0), new Vector3(6.5f, 47.3f+Y, 0),
+            new Vector3( 15,  47+Y,    0), new Vector3( 24,  47+Y,    0),
+            new Vector3( 31,  47+Y,    0), new Vector3( 39,  47+Y,    0),
+            new Vector3( 47,  47+Y,    0), new Vector3( 55,  47.3f+Y, 0),
+            new Vector3( 61,  40.5f+Y, 0), new Vector3( 65,  34.5f+Y, 0),
+            new Vector3( 70,  28.5f+Y, 0), new Vector3( 74,  22.5f+Y, 0),
+            new Vector3( 78,  10.5f+Y, 0), new Vector3( 81,  10.5f+Y, 0),
+            new Vector3( 85,  10.5f+Y, 0), new Vector3( 84,  14.5f+Y, 0),
+            new Vector3( 79,  18.5f+Y, 0), new Vector3( 84,  22.5f+Y, 0),
+            new Vector3( 90,  26.5f+Y, 0), new Vector3( 96,  26.5f+Y, 0),
         };
     }
 
@@ -498,7 +795,7 @@ public class SceneSetup : Editor
 
         for (int i = 0; i < 7; i++)
         {
-            var bot = MakeChar("Bot_"+(i+1), new Vector3(-14f+i*1.3f,-1.5f,0), cols[i], false);
+            var bot = MakeChar("Bot_"+(i+1), new Vector3(-13f+i*1.2f,-1.5f,0), cols[i], false);
 
             // Floating name tag (top-level, follows bot in world space)
             // Name = "NTag_" + bot.name so runtime Start() can resolve by convention
@@ -536,6 +833,9 @@ public class SceneSetup : Editor
             bot.AddComponent<NetworkObject>();
             bot.AddComponent<NetworkSync>();
 
+            // Dash cooldown bar above bot
+            AttachDashBar("Bot_" + (i + 1), bot.transform, bpc);
+
             botSlots.Add(bot);
         }
 
@@ -566,6 +866,9 @@ public class SceneSetup : Editor
         player.AddComponent<PlayerTrail>();
         player.AddComponent<NetworkObject>();
         var hostSync = player.AddComponent<NetworkSync>();
+
+        // Dash cooldown bar above host player
+        AttachDashBar("Player", player.transform, pc);
 
         var cf = Camera.main?.GetComponent<CameraFollow>();
         if (cf) cf.target = player.transform;
@@ -610,6 +913,13 @@ public class SceneSetup : Editor
     static void CreateManagers()
     {
         new GameObject("LocalizationManager").AddComponent<LocalizationManager>();
+
+        // Map manager — tracks which map container is active
+        var mapMgrGO = new GameObject("MapManager");
+        var mapMgr = mapMgrGO.AddComponent<MapManager>();
+        mapMgr.container0 = _container0;
+        mapMgr.container1 = _container1;
+        _container0 = null; _container1 = null; // clear after use
 
         var rm = new GameObject("RaceManager");
         var r = rm.AddComponent<RaceManager>();
@@ -753,8 +1063,52 @@ public class SceneSetup : Editor
         ui.lobbyPanel = BuildLobbyPanel(cgo.transform);
         ui.lobbyPanel.SetActive(false);
 
-        // ── Onboarding / splash screen ───────────────────────────
-        BuildOnboardingPanel(cgo.transform);
+        // ── Spectator overlay ────────────────────────────────────
+        {
+            var specMgrGO = new GameObject("SpectatorController");
+            var sc2 = specMgrGO.AddComponent<SpectatorController>();
+
+            // Bottom-center floating bar — appears when local player finishes
+            var specPan = Pan(cgo.transform, "SpectatorPanel",
+                new Color(0f, 0f, 0.04f, 0.78f),
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            var spRt = specPan.GetComponent<RectTransform>();
+            spRt.sizeDelta        = new Vector2(560, 70);
+            spRt.anchoredPosition = new Vector2(0, 30);
+
+            Button MakeSpecBtn(string bname, string icon, float anchorX, float posX)
+            {
+                var bgo  = new GameObject(bname);
+                bgo.transform.SetParent(specPan.transform, false);
+                var bImg = bgo.AddComponent<Image>();
+                bImg.color = UI_ACCENT;
+                var bBtn = bgo.AddComponent<Button>();
+                bBtn.targetGraphic = bImg;
+                var bRt = bgo.GetComponent<RectTransform>();
+                bRt.anchorMin = bRt.anchorMax = bRt.pivot = new Vector2(anchorX, 0.5f);
+                bRt.anchoredPosition = new Vector2(posX, 0);
+                bRt.sizeDelta = new Vector2(70, 60);
+                T(bgo.transform, "L", icon, new Vector2(0.5f, 0.5f), Vector2.zero,
+                  new Vector2(70, 60), 38, TextAnchor.MiddleCenter).color = Color.white;
+                return bBtn;
+            }
+
+            var prevBtn2 = MakeSpecBtn("SP_Prev", "◀", 0f,  38f);
+            prevBtn2.onClick.AddListener(() => sc2.OnPrevPressed());
+
+            var specLabel = T(specPan.transform, "SP_Label", "👁 WATCHING: ...",
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(380, 60), 28, TextAnchor.MiddleCenter);
+            specLabel.color = UI_TEXT_PRI;
+
+            var nextBtn2 = MakeSpecBtn("SP_Next", "▶", 1f, -38f);
+            nextBtn2.onClick.AddListener(() => sc2.OnNextPressed());
+
+            sc2.prevBtn    = prevBtn2;
+            sc2.nextBtn    = nextBtn2;
+            sc2.watchLabel = specLabel;
+            sc2.panel      = specPan;
+            specPan.SetActive(false);
+        }
 
         // ── Wire localization keys to all static UI texts ────────
         PostLocalize(cgo.transform);
@@ -809,12 +1163,13 @@ public class SceneSetup : Editor
 
         go.AddComponent<UIToolkitManager>();
 
-        // ── Archive legacy GameCanvas — UIToolkitManager is now the UI layer ──
+        // ── Permanently remove legacy GameCanvas — UIToolkitManager is the UI layer ──
+        // Using DestroyImmediate (not SetActive) so the old panels are truly gone from the scene.
         var legacyCanvas = GameObject.Find("GameCanvas");
         if (legacyCanvas != null)
         {
-            legacyCanvas.SetActive(false);
-            Debug.Log("[SceneSetup] Legacy GameCanvas archived (disabled) — UIToolkitManager is active.");
+            DestroyImmediate(legacyCanvas);
+            Debug.Log("[SceneSetup] Legacy GameCanvas destroyed — UIToolkitManager is now the sole UI.");
         }
 
         Debug.Log("[SceneSetup] UIToolkitRoot created with GameRoot.uxml");
@@ -1999,8 +2354,9 @@ public class SceneSetup : Editor
     {
         var go = GO(n, p, s); go.layer = groundLayer;
         Sr(go, c, 0); go.AddComponent<BoxCollider2D>();
-        // Top light strip
+        // Top light strip — child of body so it moves with it
         var top = GO(n+"_t", new Vector3(p.x, p.y+s.y*.42f, p.z-.05f), new Vector3(s.x, s.y*.18f,1));
+        top.transform.SetParent(go.transform, worldPositionStays: true);
         Sr(top, Lighter(c,.12f), 1);
     }
 
@@ -2009,6 +2365,8 @@ public class SceneSetup : Editor
         var go = GO(n, p, s); go.layer = groundLayer;
         Sr(go, body, 0); go.AddComponent<BoxCollider2D>();
         var t = GO(n+"_t", new Vector3(p.x, p.y+s.y*.42f, p.z-.05f), new Vector3(s.x, s.y*.24f,1));
+        // Parent top strip to body so MovingPlatform carries it along
+        t.transform.SetParent(go.transform, worldPositionStays: true);
         Sr(t, top, 1);
     }
 
@@ -2024,7 +2382,9 @@ public class SceneSetup : Editor
     static void Bnc(string n, Vector3 p, Vector3 s)
     {
         var go = GO(n, p, s); go.layer = groundLayer;
-        Sr(go, BOUNCE_C, 2); go.AddComponent<BoxCollider2D>(); go.AddComponent<BouncePad>();
+        Sr(go, BOUNCE_C, 2);
+        go.AddComponent<BoxCollider2D>().isTrigger = true; // trigger — no physical step
+        go.AddComponent<BouncePad>();
         // White stripe on bounce pad
         var st = GO(n+"_st", new Vector3(p.x, p.y, p.z-.02f), new Vector3(s.x*.9f, s.y*.3f,1));
         Sr(st, new Color(1,1,1,.6f), 3);
@@ -2050,10 +2410,31 @@ public class SceneSetup : Editor
 
     static void CP(string n, Vector3 p)
     {
-        var go = GO(n, p, new Vector3(0.4f, 9f, 1));
-        Sr(go, new Color(1f,1f,.3f,.20f), -1);
+        // Tall trigger strip
+        var go = GO(n, p, new Vector3(0.6f, 8f, 1));
+        Sr(go, new Color(1f, 1f, 0.2f, 0.10f), -1);
         var c = go.AddComponent<BoxCollider2D>(); c.isTrigger = true;
         go.AddComponent<Checkpoint>();
+
+        // Visible flag post so the player actually sees the checkpoint
+        var post = new GameObject(n + "_post");
+        post.transform.SetParent(go.transform, false);
+        post.transform.localPosition = new Vector3(0, 0, -0.05f);
+        post.transform.localScale    = new Vector3(0.12f / 0.6f, 1f, 1f); // thin pole, full height
+        var postSr = post.AddComponent<SpriteRenderer>();
+        postSr.sprite = WhiteSprite();
+        postSr.color  = new Color(1f, 0.92f, 0.12f, 0.55f); // gold pole
+        postSr.sortingOrder = 2;
+
+        // Flag diamond at top
+        var flag = new GameObject(n + "_flag");
+        flag.transform.SetParent(go.transform, false);
+        flag.transform.localPosition = new Vector3(0.3f / 0.6f, 0.44f, -0.06f); // top-right of post
+        flag.transform.localScale    = new Vector3(0.50f / 0.6f, 0.20f, 1f);
+        var flagSr = flag.AddComponent<SpriteRenderer>();
+        flagSr.sprite = WhiteSprite();
+        flagSr.color  = new Color(1f, 0.92f, 0.12f, 0.80f); // bright gold flag
+        flagSr.sortingOrder = 3;
     }
 
     // Purple wall-jump surface with horizontal grip stripes
@@ -2081,12 +2462,299 @@ public class SceneSetup : Editor
         go.AddComponent<KillZone>();
     }
 
+    /// <summary>
+    /// Scans every SpriteRenderer inside <paramref name="container"/>, computes the
+    /// combined world-space bounding box of all geometry, then places four invisible
+    /// kill-zone triggers offset by <paramref name="padding"/> outside that box.
+    ///
+    /// This means the kill-zone "frame" always matches the actual map size — no
+    /// manual numbers needed.  Changing the map auto-updates the boundaries.
+    /// </summary>
+    static void BuildBoundaryKillZones(GameObject container, string prefix, float padding = 18f)
+    {
+        if (container == null) return;
+
+        // ── 1. Compute world-space bounds of all geometry renderers ──────────
+        // IMPORTANT: sr.bounds is UNRELIABLE in Edit Mode (returns 0 until rendered).
+        // Instead, compute bounds from world position + sprite pixel size / PPU × lossyScale.
+        // This mirrors exactly what Unity would compute at runtime.
+        Bounds total = new Bounds();
+        bool   any   = false;
+        foreach (var sr in container.GetComponentsInChildren<SpriteRenderer>())
+        {
+            if (sr.sprite == null) continue;
+            Vector3 pos   = sr.transform.position;
+            Vector3 sc    = sr.transform.lossyScale; // world-space scale (inherits all parents)
+            // Sprite size in world units: sprite.rect / pixelsPerUnit, scaled by lossyScale
+            float w = (sr.sprite.rect.width  / sr.sprite.pixelsPerUnit) * Mathf.Abs(sc.x);
+            float h = (sr.sprite.rect.height / sr.sprite.pixelsPerUnit) * Mathf.Abs(sc.y);
+            var   b = new Bounds(pos, new Vector3(w, h, 0f));
+            if (any) total.Encapsulate(b);
+            else     { total = b; any = true; }
+        }
+        if (!any) { UnityEngine.Debug.LogWarning($"BuildBoundaryKillZones: no renderers in {container.name}"); return; }
+
+        // ── 2. Expand by padding ─────────────────────────────────────────────
+        const float T = 8f;   // kill-zone strip thickness
+
+        float cx  = total.center.x;
+        float cy  = total.center.y;
+
+        float yBot = total.min.y - padding;        // bottom edge
+        float yTop = total.max.y + padding;        // top edge
+        float xL   = total.min.x - padding;        // left edge
+        float xR   = total.max.x + padding;        // right edge
+
+        // Horizontal strips span the full width + T overlap so corners are covered
+        float fullW = (xR - xL) + T * 2f;
+        // Vertical strips span the full height (corners already covered above)
+        float fullH = yTop - yBot;
+
+        // ── 3. Spawn four strips as children of the container ────────────────
+        var saved    = _trackParent;
+        _trackParent = container.transform;      // Kz() parents to _trackParent
+
+        Kz(prefix + "Bottom", new Vector3(cx,  yBot, 0), new Vector3(fullW, T,     1));
+        Kz(prefix + "Top",    new Vector3(cx,  yTop, 0), new Vector3(fullW, T,     1));
+        Kz(prefix + "Left",   new Vector3(xL,  cy,   0), new Vector3(T,     fullH, 1));
+        Kz(prefix + "Right",  new Vector3(xR,  cy,   0), new Vector3(T,     fullH, 1));
+
+        _trackParent = saved;
+
+        UnityEngine.Debug.Log(
+            $"[KillZone] {prefix} bounds: x=[{total.min.x:F1}, {total.max.x:F1}] " +
+            $"y=[{total.min.y:F1}, {total.max.y:F1}]  padding={padding}");
+    }
+
+    // ── New mechanic object helpers ─────────────────────────────
+
+    // Ice surface — thin slab on top of a platform; player slides on it
+    static void Ice(string n, Vector3 p, Vector3 s)
+    {
+        var go = GO(n, p, s); go.layer = groundLayer;
+        Sr(go, new Color(0.72f, 0.92f, 1.00f, 0.55f), 3); // icy blue-white
+        go.AddComponent<BoxCollider2D>().isTrigger = true; // trigger — no physical step
+        go.AddComponent<IceSurface>();
+    }
+
+    // Wind / tornado column — upward lift trigger zone, teal semi-transparent
+    static void Wnd(string n, Vector3 p, Vector3 s)
+    {
+        var go = GO(n, p, s);
+        Sr(go, new Color(0.45f, 1.00f, 0.85f, 0.28f), 1); // soft teal
+        var col = go.AddComponent<BoxCollider2D>(); col.isTrigger = true;
+        go.AddComponent<WindZone>();
+        // Flow indicator strips — children so they move with the zone
+        for (int i = 0; i < 3; i++)
+        {
+            float yo = (-s.y * 0.3f + i * (s.y * 0.3f)) / s.y; // local offset
+            var line = new GameObject(n + "_l" + i);
+            line.transform.SetParent(go.transform, false);
+            line.transform.localPosition = new Vector3(0, yo, -0.05f / s.y);
+            line.transform.localScale    = new Vector3(0.55f, 0.06f / s.y, 1f);
+            var lsr = line.AddComponent<SpriteRenderer>();
+            lsr.sprite = WhiteSprite();
+            lsr.color  = new Color(0.5f, 1f, 0.9f, 0.35f);
+            lsr.sortingOrder = 2;
+        }
+    }
+
+    // Dash-boost orb — next dash travels 1.7× further; bobs up/down, purple glow
+    static void Dsh(string n, Vector3 p)
+    {
+        var go = GO(n, p, new Vector3(0.52f, 0.52f, 1f));
+        Sr(go, new Color(0.72f, 0.18f, 1.00f, 0.90f), 4); // purple
+        // Inner bright core — child so it moves with the orb (immune to scale)
+        var core = new GameObject(n + "_c");
+        core.transform.SetParent(go.transform, false);
+        core.transform.localPosition = new Vector3(0, 0, -0.05f);
+        core.transform.localScale    = new Vector3(0.55f, 0.55f, 1f);
+        var coreSr = core.AddComponent<SpriteRenderer>();
+        coreSr.sprite = WhiteSprite();
+        coreSr.color  = new Color(0.88f, 0.55f, 1.00f, 0.75f);
+        coreSr.sortingOrder = 5;
+        var col = go.AddComponent<BoxCollider2D>(); col.isTrigger = true;
+        go.AddComponent<DashBoost>();
+    }
+
+    // Dynamic spikes — appear/disappear cycle; respawns player on touch when active
+    static void Spk(string n, Vector3 p, Vector3 s,
+                    float onDur = 1.0f, float offDur = 3.5f, float delay = 0f)
+    {
+        var go = GO(n, p, s);
+        var baseSr = go.AddComponent<SpriteRenderer>();
+        baseSr.sprite = WhiteSprite();
+        baseSr.color  = new Color(1.00f, 0.18f, 0.18f, 0.92f); // neon red
+        baseSr.sortingOrder = 4;
+        // Spike tip triangles — children so DynamicSpikes can hide/show them together
+        // (We only animate the base collider; tips are purely visual siblings under the parent)
+        int tipsCount = Mathf.Max(1, Mathf.RoundToInt(s.x / 0.42f));
+        for (int i = 0; i < tipsCount; i++)
+        {
+            float localXOff = s.x > 0.6f
+                ? (-0.5f + (i + 0.5f) / tipsCount) // normalized -0.5 to +0.5
+                : 0f;
+            var tip = new GameObject(n + "_t" + i);
+            tip.transform.SetParent(go.transform, false);
+            tip.transform.localPosition = new Vector3(localXOff, 0.38f, -0.04f / s.y);
+            tip.transform.localScale    = new Vector3(0.22f / s.x, 0.32f / s.y, 1f);
+            var tsr = tip.AddComponent<SpriteRenderer>();
+            tsr.sprite = WhiteSprite();
+            tsr.color  = new Color(1f, 0.45f, 0.12f, 0.88f); // orange tips
+            tsr.sortingOrder = 5;
+        }
+        var col = go.AddComponent<BoxCollider2D>(); col.isTrigger = true;
+        var ds = go.AddComponent<DynamicSpikes>();
+        ds.onDuration   = onDur;
+        ds.offDuration  = offDur;
+        ds.initialDelay = delay;
+    }
+
+    // Decorative block — purely visual, no collider, no logic
+    // Used to add environmental flavour to each zone (trees, rocks, grass, etc.)
+    static void Deco(string n, Vector3 p, Vector3 s, Color c, int order = 1)
+    {
+        var go = GO(n, p, s);
+        Sr(go, c, order);
+    }
+
+    // ── New interactive objects ────────────────────────────────
+
+    /// Conveyor belt: trigger strip that pushes players horizontally.
+    /// speed > 0 = right, speed < 0 = left.
+    static void Cnv(string n, Vector3 p, Vector3 s, float speed)
+    {
+        var go = GO(n, p, s);
+        // Colour: green for right-push, orange for left-push
+        var baseCol = speed > 0
+            ? new Color(0.20f, 0.85f, 0.35f, 0.88f)
+            : new Color(0.95f, 0.45f, 0.10f, 0.88f);
+        Sr(go, baseCol, 2);
+        // Arrow stripes (children, purely visual)
+        int arrows = Mathf.Max(1, Mathf.RoundToInt(s.x / 0.55f));
+        for (int i = 0; i < arrows; i++)
+        {
+            float lx = s.x > 0.6f ? (-0.5f + (i + 0.5f) / arrows) : 0f;
+            var ar = new GameObject(n + "_a" + i);
+            ar.transform.SetParent(go.transform, false);
+            ar.transform.localPosition = new Vector3(lx, 0f, -0.04f);
+            ar.transform.localScale    = new Vector3(0.18f / s.x, 0.55f / s.y, 1f);
+            Sr(ar, new Color(1f, 1f, 1f, 0.55f), 3);
+        }
+        var col = go.AddComponent<BoxCollider2D>(); col.isTrigger = true;
+        go.AddComponent<ConveyorBelt>().speed = speed;
+    }
+
+    /// Crumbling platform: solid platform that shakes and falls when stood on.
+    static void Crm(string n, Vector3 p, Vector3 s, Color body, Color top)
+    {
+        var go = GO(n, p, s); go.layer = groundLayer;
+        Sr(go, body, 0);
+        var col = go.AddComponent<BoxCollider2D>(); col.isTrigger = false;
+        go.AddComponent<CrumblingPlatform>();
+        // Top stripe (same visual as regular platform)
+        var t = GO(n + "_t", new Vector3(p.x, p.y + s.y * 0.42f, p.z - 0.05f),
+                             new Vector3(s.x, s.y * 0.24f, 1));
+        t.transform.SetParent(go.transform, worldPositionStays: true);
+        Sr(t, top, 1);
+        // Crack marks (visual, horizontal thin lines)
+        for (int i = 0; i < 3; i++)
+        {
+            float lx = -0.3f + i * 0.3f;
+            var cr = new GameObject(n + "_cr" + i);
+            cr.transform.SetParent(go.transform, false);
+            cr.transform.localPosition = new Vector3(lx, 0.1f, -0.06f);
+            cr.transform.localScale    = new Vector3(0.12f / s.x, 0.04f / s.y, 1f);
+            Sr(cr, new Color(0f, 0f, 0f, 0.35f), 3);
+        }
+    }
+
+    /// Low-gravity zone: semi-transparent trigger that reduces gravity.
+    static void Lgz(string n, Vector3 p, Vector3 s, float gravScale = 0.35f)
+    {
+        var go = GO(n, p, s);
+        Sr(go, new Color(0.45f, 0.80f, 1.00f, 0.10f), -1); // very subtle tint
+        var col = go.AddComponent<BoxCollider2D>(); col.isTrigger = true;
+        go.AddComponent<LowGravityZone>().gravityScale = gravScale;
+        // Border glow lines (4 edges)
+        Color border = new Color(0.45f, 0.80f, 1.00f, 0.40f);
+        float t = 0.05f; // thickness in local units
+        foreach (var (lp, ls) in new[]{
+            (new Vector3(0,  0.5f - t * 0.5f, -0.02f), new Vector3(1f, t, 1f)), // top
+            (new Vector3(0, -0.5f + t * 0.5f, -0.02f), new Vector3(1f, t, 1f)), // bot
+            (new Vector3(-0.5f + t * 0.5f, 0,  -0.02f), new Vector3(t, 1f, 1f)), // left
+            (new Vector3( 0.5f - t * 0.5f, 0,  -0.02f), new Vector3(t, 1f, 1f)), // right
+        })
+        {
+            var edge = new GameObject(n + "_e");
+            edge.transform.SetParent(go.transform, false);
+            edge.transform.localPosition = lp;
+            edge.transform.localScale    = ls;
+            Sr(edge, border, 0);
+        }
+    }
+
+    /// Teleport pad: trigger circle; teleports to exitPoint.
+    static void Tpt(string n, Vector3 p, Vector3 exitPos)
+    {
+        float r = 0.7f; // radius in world units
+        var go = GO(n, p, new Vector3(r * 2f, r * 0.35f, 1f));
+        Sr(go, new Color(0.4f, 0.9f, 1.0f, 0.85f), 4);
+        var col = go.AddComponent<BoxCollider2D>(); col.isTrigger = true;
+        var tp = go.AddComponent<TeleportPad>();
+        tp.exitPoint = exitPos;
+        // Outer ring visual
+        var ring = new GameObject(n + "_ring");
+        ring.transform.SetParent(go.transform, false);
+        ring.transform.localPosition = new Vector3(0, 0, -0.03f);
+        ring.transform.localScale    = new Vector3(1.15f, 3.5f, 1f);
+        Sr(ring, new Color(0.65f, 0.35f, 1.00f, 0.55f), 3);
+    }
+
+    // ── DashBar factory ────────────────────────────────────────
+    /// <summary>
+    /// Creates a top-level "DBar_<id>" object (immune to player scale) with a
+    /// dark background strip and a cyan fill strip.  DashBar.LateUpdate handles
+    /// positioning and fill width each frame.
+    /// </summary>
+    static void AttachDashBar(string id, Transform target, PlayerController pc)
+    {
+        const float W = 0.72f;
+        const float H = 0.055f;
+
+        var barGO = new GameObject("DBar_" + id);
+        barGO.transform.position = target.position;
+
+        // Background
+        var bg = new GameObject("DB_Bg");
+        bg.transform.SetParent(barGO.transform, false);
+        bg.transform.localScale = new Vector3(W, H, 1f);
+        var bgSr = bg.AddComponent<SpriteRenderer>();
+        bgSr.sprite = WhiteSprite();
+        bgSr.color  = new Color(0.04f, 0.06f, 0.14f, 0.78f);
+        bgSr.sortingOrder = 6;
+
+        // Fill strip (left-aligned by DashBar LateUpdate)
+        var fill = new GameObject("DB_Fill");
+        fill.transform.SetParent(barGO.transform, false);
+        fill.transform.localScale = new Vector3(W, H * 0.65f, 1f);
+        var fillSr = fill.AddComponent<SpriteRenderer>();
+        fillSr.sprite = WhiteSprite();
+        fillSr.color  = new Color(0.10f, 0.88f, 1.00f, 0.30f); // faded cyan = ready
+        fillSr.sortingOrder = 7;
+
+        var db = barGO.AddComponent<DashBar>();
+        db.Init(target, pc, fill.transform, fillSr);
+    }
+
     // ── Generic helpers ────────────────────────────────────────
     static GameObject GO(string n, Vector3 p, Vector3 s)
     {
         var go = new GameObject(n);
         go.transform.position = p;
         go.transform.localScale = s;
+        // Parent to active track container so map switching can enable/disable the whole set
+        if (_trackParent != null) go.transform.SetParent(_trackParent, true);
         return go;
     }
 

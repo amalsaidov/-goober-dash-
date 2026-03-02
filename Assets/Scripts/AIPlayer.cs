@@ -45,14 +45,13 @@ public class AIPlayer : MonoBehaviour
     private Vector3 lastStuckPos;
 
     // ── Wall-jump shaft mode (Ultra only) ─────────────────────────────────
-    // The Zone-5 shaft: left wall inner face x≈109.5, right wall inner face x≈113.5
-    // Walls hover at y=0; bot passes under at ground level, then jumps in and climbs.
+    // Zone-4 climb shaft: left wall x≈-6, right wall x≈6, top y≈47
     private bool  inShaftMode  = false;
     private int   shaftDir     = 1;    // 1=moving right toward right wall, -1=left
-    private const float SHAFT_X_MIN  = 108.5f;
-    private const float SHAFT_X_MAX  = 114.5f;
-    private const float SHAFT_ENTRY_X = 110.5f; // where bot jumps up to enter
-    private const float SHAFT_TOP_Y   = 8.5f;   // once above this, exit shaft mode
+    private const float SHAFT_X_MIN   = -6.5f;
+    private const float SHAFT_X_MAX   =  6.5f;
+    private const float SHAFT_ENTRY_X =  0f;    // enter shaft near x=0
+    private const float SHAFT_TOP_Y   = 47f;    // exit once above the walls
 
     // ── Init ──────────────────────────────────────────────────────────────
 
@@ -75,6 +74,9 @@ public class AIPlayer : MonoBehaviour
         if (WaypointPath.Instance != null)
             waypoints = WaypointPath.Instance.points;
     }
+
+    /// <summary>Set waypoints from the active map's WaypointPath (called by MapManager).</summary>
+    public void SetWaypoints(Vector3[] pts) { waypoints = pts; currentWaypoint = 0; }
 
     // Called by DifficultyManager.Select() before the race starts
     public void ApplyPreset(DifficultyManager.Preset p)

@@ -93,6 +93,12 @@ public class RaceManager : MonoBehaviour
     // ── Called by MainMenuManager when PLAY is pressed ─────────────────────
     public void OnPlayPressed()
     {
+        UIManager.Instance?.ShowMapSelectPanel();
+    }
+
+    // ── Called by Map Selection UI after a map is chosen ───────────────────
+    public void OnMapSelected()
+    {
         UIManager.Instance?.ShowDifficultyPanel();
     }
 
@@ -109,6 +115,10 @@ public class RaceManager : MonoBehaviour
         UIManager.Instance?.UpdatePlayerCount(players.Count);
 
         foreach (var p in players) p.ResetForRound();
+
+        // Restore chosen color after ResetForRound (solo mode only)
+        if (NetworkLobbyManager.Instance == null || !NetworkLobbyManager.Instance.IsSpawned)
+            ApplySoloPlayerColor();
 
         yield return new WaitForSeconds(0.5f);
 
@@ -129,6 +139,7 @@ public class RaceManager : MonoBehaviour
         racing = true;
         timer  = roundDuration;
         finished.Clear();
+        UIManager.Instance?.ShowHUD();
         foreach (var p in players) p.OnRaceStart();
     }
 
@@ -158,11 +169,15 @@ public class RaceManager : MonoBehaviour
         finished.Add(player);
 
         if (player.isHuman)
+        {
             UIManager.Instance?.ShowMessage(
                 string.Format(
                     LocalizationManager.Instance?.Get("msg.finished.fmt") ?? "You finished #{0}!",
                     finished.Count),
                 Color.yellow);
+            // Enter spectator mode so the human player can watch the remaining racers
+            SpectatorController.Instance?.Activate();
+        }
 
         int toAdvance = Mathf.Max(1, players.Count - eliminatePerRound);
         if (finished.Count >= toAdvance)
@@ -173,6 +188,7 @@ public class RaceManager : MonoBehaviour
     {
         if (!racing) yield break;
         racing = false;
+        SpectatorController.Instance?.Deactivate();
 
         yield return new WaitForSeconds(1f);
 
@@ -209,6 +225,7 @@ public class RaceManager : MonoBehaviour
                                        : (loc?.Get("msg.losetext") ?? "Better luck next time...");
             Color  col     = playerWon ? new Color(0.2f, 1f, 0.3f) : new Color(1f, 0.28f, 0.28f);
 
+            UIManager.Instance?.HideHUD();
             yield return new WaitForSeconds(1.5f);
             UIManager.Instance?.ShowEndScreen(title, sub, col);
             yield break;
@@ -239,9 +256,22 @@ public class RaceManager : MonoBehaviour
     public void ReturnToMainMenu()
     {
         UIManager.Instance?.HideEndScreen();
+        UIManager.Instance?.HideHUD();
         ReviveAllPlayers();
         round = 1;
         UIManager.Instance?.ShowMainMenu();
+    }
+
+    // ── Solo player color ────────────────────────────────────────────────────
+    void ApplySoloPlayerColor()
+    {
+        int idx = PlayerPrefs.GetInt("GS_colorIndex", 0);
+        Color col = LobbyPanelController.PlayerColors[idx % LobbyPanelController.PlayerColors.Length];
+        RacePlayer human = players.Find(p => p.isHuman);
+        if (human == null) return;
+        human.SetPlayerColor(col);
+        var ns = human.GetComponent<NetworkSync>();
+        if (ns) ns.SetNameTag(PlayerPrefs.GetString("PlayerNickname", "Player"), col);
     }
 
     void ReviveAllPlayers()

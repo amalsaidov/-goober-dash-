@@ -13,7 +13,7 @@ public class UIToolkitManager : UIManager
 {
     // ── Panels ────────────────────────────────────────────────────────────
     VisualElement _onboarding;
-    VisualElement _mainMenu, _difficulty, _settings, _lobby, _pause, _end;
+    VisualElement _mainMenu, _mapSelect, _difficulty, _settings, _lobby, _pause, _end;
     VisualElement[] _allPanels; // all full-screen swappable panels
 
     // ── HUD ───────────────────────────────────────────────────────────────
@@ -57,13 +57,14 @@ public class UIToolkitManager : UIManager
         // ── Cache panels ─────────────────────────────────────────────────
         _onboarding = _root.Q("OnboardingPanel");
         _mainMenu   = _root.Q("MainMenuPanel");
+        _mapSelect  = _root.Q("MapSelectPanel");
         _difficulty = _root.Q("DifficultyPanel");
         _settings   = _root.Q("SettingsPanel");
         _lobby      = _root.Q("LobbyPanel");
         _pause      = _root.Q("PausePanel");
         _end        = _root.Q("EndPanel");
 
-        _allPanels = new[] { _onboarding, _mainMenu, _difficulty, _settings, _lobby, _end };
+        _allPanels = new[] { _onboarding, _mainMenu, _mapSelect, _difficulty, _settings, _lobby, _end };
 
         // ── Cache HUD ────────────────────────────────────────────────────
         _hudLayer   = _root.Q("HUDLayer");
@@ -79,6 +80,11 @@ public class UIToolkitManager : UIManager
         // ── Cache Message ────────────────────────────────────────────────
         _messageBanner = _root.Q("MessageBanner");
         _messageText   = _root.Q<Label>("message-text");
+
+        // ── Non-interactive overlays — must NOT block pointer events ─────
+        if (_hudLayer         != null) _hudLayer.pickingMode         = PickingMode.Ignore;
+        if (_countdownOverlay != null) _countdownOverlay.pickingMode = PickingMode.Ignore;
+        if (_messageBanner    != null) _messageBanner.pickingMode    = PickingMode.Ignore;
 
         // ── Cache End ────────────────────────────────────────────────────
         _endTitle = _root.Q<Label>("end-title");
@@ -107,14 +113,29 @@ public class UIToolkitManager : UIManager
         if (_pause != null) { _pause.style.display = DisplayStyle.None; _pause.pickingMode = PickingMode.Ignore; }
 
         // ── Wire buttons ──────────────────────────────────────────────────
+        _splashDone = true; // skip onboarding — go straight to main menu
         WireButtons();
+    }
 
-        // Onboarding: tap anywhere to dismiss
-        if (_onboarding != null)
-            _onboarding.RegisterCallback<PointerDownEvent>(_ => DismissOnboarding());
+    // Start fires after all Awake()s — singletons are ready here
+    void Start()
+    {
+        QualitySettings.SetQualityLevel(PlayerPrefs.GetInt("GS_quality", 2));
+        WorldThemeManager.Instance?.Apply(PlayerPrefs.GetInt("GS_theme", 0));
+        LocalizationManager.Instance?.SetLanguage(
+            PlayerPrefs.GetInt("GS_lang", 0) == 0
+                ? LocalizationManager.Lang.English
+                : LocalizationManager.Lang.Russian);
 
-        // Show onboarding splash on startup
-        ShowOnboarding();
+        int[] rt = { 45, 60, 75 };
+        int rtIdx = Mathf.Clamp(PlayerPrefs.GetInt("GS_roundIdx", 2), 0, 2);
+        if (RaceManager.Instance != null)
+        {
+            RaceManager.Instance.roundDuration     = rt[rtIdx];
+            RaceManager.Instance.eliminatePerRound = PlayerPrefs.GetInt("GS_elimIdx", 1) + 1;
+        }
+        if (CameraFollow.Instance != null)
+            CameraFollow.Instance.shakeEnabled = PlayerPrefs.GetInt("GS_camShake", 1) == 1;
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -190,9 +211,11 @@ public class UIToolkitManager : UIManager
         if (!_splashDone) return;
         SwitchPanel(_mainMenu);
     }
-    public override void HideMainMenu()        => PanelOut(_mainMenu, null);
-    public override void ShowDifficultyPanel() => SwitchPanel(_difficulty);
-    public override void HideDifficultyPanel() => PanelOut(_difficulty, null);
+    public override void HideMainMenu()          => PanelOut(_mainMenu, null);
+    public override void ShowMapSelectPanel()    => SwitchPanel(_mapSelect);
+    public override void HideMapSelectPanel()    => PanelOut(_mapSelect, null);
+    public override void ShowDifficultyPanel()   => SwitchPanel(_difficulty);
+    public override void HideDifficultyPanel()   => PanelOut(_difficulty, null);
     public override void ShowSettings()        => SwitchPanel(_settings);
     public override void HideSettings()        => PanelOut(_settings, null);
     public override void HideEndScreen()       => PanelOut(_end, null);
@@ -515,6 +538,11 @@ public class UIToolkitManager : UIManager
         Btn("btn-play",        () => RaceManager.Instance?.OnPlayPressed());
         Btn("btn-multiplayer", () => ShowLobbyPanel());
         Btn("btn-settings",    () => ShowSettings());
+
+        // Map Select
+        Btn("btn-map0", () => { MapManager.Instance?.SelectMap(0); RaceManager.Instance?.OnMapSelected(); });
+        Btn("btn-map1", () => { MapManager.Instance?.SelectMap(1); RaceManager.Instance?.OnMapSelected(); });
+        BtnIn(_mapSelect, "btn-back", () => ShowMainMenu());
 
         // Difficulty (back wired per-panel to avoid ambiguity)
         Btn("btn-easy",   () => DifficultyManager.Instance?.Select(DifficultyManager.Diff.Easy));

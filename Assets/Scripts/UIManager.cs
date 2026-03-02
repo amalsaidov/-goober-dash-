@@ -207,6 +207,10 @@ public class UIManager : MonoBehaviour
     public virtual void ShowHUD() { }
     public virtual void HideHUD() { }
 
+    // ── Map Select (overridden by UIToolkitManager) ────────────────────────
+    public virtual void ShowMapSelectPanel() { }
+    public virtual void HideMapSelectPanel() { }
+
     // ── Misc (overridden by UIToolkitManager) ──────────────────────────────
     public virtual void OnSplashDismissed() { }
 

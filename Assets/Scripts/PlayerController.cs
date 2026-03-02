@@ -44,8 +44,25 @@ public class PlayerController : MonoBehaviour
     private Vector3 originalScale;
     private float dashTimer, dashCooldownTimer;
     private bool isDashing;
+    private bool _dashBoosted;
+    private bool _dashWasBoosted;   // true during the boosted dash (allows higher speed cap)
+    private bool  _flyMode;
+    private bool  _ghostMode;
+    private float _savedGravityScale;
+    private Collider2D _col;
+
+    /// <summary>0 = just used, 1 = fully recharged. Used by DashBar.</summary>
+    public float DashReadyRatio => dashCooldown > 0f
+        ? Mathf.Clamp01(1f - dashCooldownTimer / dashCooldown) : 1f;
+    /// <summary>True while a DashBoost pickup is active.</summary>
+    public bool DashIsBoosted => _dashBoosted;
+    /// <summary>Called by DashBoost orb — next dash travels 3× further.</summary>
+    public void ActivateDashBoost() => _dashBoosted = true;
     private Vector3 spawnPoint;
     private int jumpsRemaining = 2;
+
+    // Ice surface
+    private bool _onIce;
 
     // Wall
     private bool isWallLeft, isWallRight;
@@ -55,8 +72,9 @@ public class PlayerController : MonoBehaviour
 
     void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
-        sr = GetComponent<SpriteRenderer>();
+        rb   = GetComponent<Rigidbody2D>();
+        sr   = GetComponent<SpriteRenderer>();
+        _col = GetComponent<Collider2D>();
         originalScale = transform.localScale;
         spawnPoint = transform.position;
         _assignedColor = sr.color;
@@ -76,6 +94,33 @@ public class PlayerController : MonoBehaviour
 
         var keyboard = Keyboard.current; // null on iPad — touch fills in below
 
+        // ── Fly / Ghost mode toggles ─────────────────────────────────────────
+        if (keyboard != null && keyboard.fKey.wasPressedThisFrame) ToggleFlyMode();
+        if (keyboard != null && keyboard.gKey.wasPressedThisFrame) ToggleGhostMode();
+        if (_flyMode)
+        {
+            moveInput = 0f;
+            if ((keyboard != null && (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed))
+                || TouchInput.moveLeft)  moveInput = -1f;
+            if ((keyboard != null && (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed))
+                || TouchInput.moveRight) moveInput =  1f;
+            if (moveInput > 0) sr.flipX = false;
+            else if (moveInput < 0) sr.flipX = true;
+            sr.color = new Color(0.35f, 1f, 1f, 1f); // cyan tint — visual fly indicator
+            return; // skip all normal jump / wall / dash logic
+        }
+        if (_ghostMode)
+        {
+            moveInput = 0f;
+            if ((keyboard != null && (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed))
+                || TouchInput.moveLeft)  moveInput = -1f;
+            if ((keyboard != null && (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed))
+                || TouchInput.moveRight) moveInput =  1f;
+            if (moveInput > 0) sr.flipX = false;
+            else if (moveInput < 0) sr.flipX = true;
+            return; // colour is handled by GhostPulse coroutine
+        }
+
         // ── Dash ────────────────────────────────────────────────────────────
         dashCooldownTimer -= Time.deltaTime;
         bool dashPressed = (keyboard != null && keyboard.leftShiftKey.wasPressedThisFrame)
@@ -86,7 +131,7 @@ public class PlayerController : MonoBehaviour
         if (isDashing)
         {
             dashTimer -= Time.deltaTime;
-            if (dashTimer <= 0) isDashing = false;
+            if (dashTimer <= 0) { isDashing = false; _dashWasBoosted = false; }
             return;
         }
 
@@ -187,17 +232,33 @@ public class PlayerController : MonoBehaviour
 
         UpdateVisuals();
 
-        if (transform.position.y < -12f) Respawn();
+        if (transform.position.y < -35f) Respawn(); // absolute failsafe below global kill zone
     }
 
     void FixedUpdate()
     {
+        // Fly / Ghost mode: free 2D movement, gravity off
+        if ((_flyMode || _ghostMode) && canControl)
+        {
+            var kb = Keyboard.current;
+            float flyVert = 0f;
+            if (kb != null && (kb.wKey.isPressed || kb.upArrowKey.isPressed))   flyVert =  1f;
+            if (kb != null && (kb.sKey.isPressed || kb.downArrowKey.isPressed)) flyVert = -1f;
+            rb.linearVelocity = new Vector2(moveInput * moveSpeed, flyVert * moveSpeed);
+            return;
+        }
+
         if (!isDashing && canControl)
         {
             if (isWallSliding)
                 // Don't push into the wall — let gravity pull the player down freely.
                 // Setting vx=0 removes horizontal fighting against the wall surface.
                 rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            else if (_onIce)
+                // Ice: lerp slowly toward target speed — low-friction slide
+                rb.linearVelocity = new Vector2(
+                    Mathf.Lerp(rb.linearVelocity.x, moveInput * moveSpeed, 3.5f * Time.fixedDeltaTime),
+                    rb.linearVelocity.y);
             else
                 rb.linearVelocity = new Vector2(moveInput * moveSpeed, rb.linearVelocity.y);
         }
@@ -209,8 +270,9 @@ public class PlayerController : MonoBehaviour
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, vy);
         }
 
-        // Hard velocity limits every tick
-        float vx      = Mathf.Clamp(rb.linearVelocity.x, -MAX_H_SPEED, MAX_H_SPEED);
+        // Hard velocity limits every tick (boosted dash gets a higher horizontal cap)
+        float hCap  = (_dashWasBoosted && isDashing) ? dashForce * 2.0f : MAX_H_SPEED;
+        float vx    = Mathf.Clamp(rb.linearVelocity.x, -hCap, hCap);
         float vyClamped = Mathf.Clamp(rb.linearVelocity.y, MAX_FALL, MAX_RISE);
         rb.linearVelocity = new Vector2(vx, vyClamped);
     }
@@ -220,8 +282,11 @@ public class PlayerController : MonoBehaviour
         isDashing = true;
         dashTimer = dashDuration;
         dashCooldownTimer = dashCooldown;
-        float dir = sr.flipX ? -1f : 1f;
-        rb.linearVelocity = new Vector2(dir * dashForce, rb.linearVelocity.y * 0.5f);
+        float dir   = sr.flipX ? -1f : 1f;
+        float force = dashForce * (_dashBoosted ? 2.0f : 1f);
+        _dashWasBoosted = _dashBoosted;
+        _dashBoosted = false;
+        rb.linearVelocity = new Vector2(dir * force, rb.linearVelocity.y * 0.5f);
         StartCoroutine(DashFlash());
     }
 
@@ -260,7 +325,7 @@ public class PlayerController : MonoBehaviour
         {
             transform.localScale = new Vector3(originalScale.x * 1.5f, originalScale.y * 0.55f, 1f);
             float fallSpeed = Mathf.Abs(rb.linearVelocity.y);
-            if (fallSpeed > 5f) CameraFollow.Instance?.Shake(fallSpeed * 0.02f, 0.15f);
+            if (fallSpeed > 5f) CameraFollow.Instance?.Shake(fallSpeed * 0.006f, 0.12f);
         }
     }
 
@@ -293,6 +358,71 @@ public class PlayerController : MonoBehaviour
     public void TakeDamage() { }
     public void BounceUp() { rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * 0.8f); }
     public void UpdateSpawnPoint(Vector3 pos) => spawnPoint = pos;
+
+    /// <summary>
+    /// Toggles noclip fly mode: gravity off, free 2D movement with W/S.
+    /// F key on keyboard; also callable from the touch FLY button.
+    /// </summary>
+    public void ToggleFlyMode()
+    {
+        if (!canControl) return; // blocked during spectator mode
+        // Exit ghost mode first if active so both don't run together
+        if (_ghostMode) { _ghostMode = false; if (_col) _col.enabled = true; }
+
+        _flyMode = !_flyMode;
+        if (_flyMode)
+        {
+            _savedGravityScale = rb.gravityScale;
+            rb.gravityScale    = 0f;
+            rb.linearVelocity  = Vector2.zero;
+        }
+        else
+        {
+            rb.gravityScale = _savedGravityScale;
+            sr.color        = BaseColor(); // restore color when exiting fly mode
+        }
+    }
+
+    /// <summary>
+    /// Ghost mode: noclip + gravity off + pulsing semi-transparent look.
+    /// G key on keyboard; also callable from the touch GHOST button.
+    /// </summary>
+    public void ToggleGhostMode()
+    {
+        if (!canControl) return; // blocked during spectator mode
+        _ghostMode = !_ghostMode;
+        if (_ghostMode)
+        {
+            // Exit fly mode if active so both don't run together
+            if (_flyMode) ToggleFlyMode();
+            _savedGravityScale = rb.gravityScale;
+            rb.gravityScale    = 0f;
+            rb.linearVelocity  = Vector2.zero;
+            if (_col) _col.enabled = false; // pass through walls
+            StartCoroutine(GhostPulse());
+        }
+        else
+        {
+            rb.gravityScale   = _savedGravityScale;
+            if (_col) _col.enabled = true;
+            StopCoroutine(GhostPulse());
+            sr.color = BaseColor();
+        }
+    }
+
+    System.Collections.IEnumerator GhostPulse()
+    {
+        while (_ghostMode)
+        {
+            float t = Mathf.PingPong(Time.time * 2.5f, 1f);
+            float a = Mathf.Lerp(0.25f, 0.60f, t);
+            sr.color = new Color(0.8f, 0.85f, 1f, a); // pale-blue ghost tint
+            yield return null;
+        }
+    }
+
+    /// Set by IceSurface while the player is standing on an icy platform.
+    public void SetOnIce(bool v) => _onIce = v;
 
     void Respawn()
     {

@@ -19,6 +19,18 @@ public class TouchControlsOverlay : MonoBehaviour
     bool _jumpDownBuf, _jumpUpBuf, _dashDownBuf;
     bool _prevJumpHeld;
 
+    // ── Fly mode button ───────────────────────────────────────────────────
+    Image _flyBtnImg;
+    bool  _flyActive;
+    static readonly Color FLY_OFF   = new Color(0f,    0f,    0f,    0.35f);
+    static readonly Color FLY_ON    = new Color(0.35f, 1f,    1f,    0.55f);
+
+    // ── Ghost mode button ─────────────────────────────────────────────────
+    Image _ghostBtnImg;
+    bool  _ghostActive;
+    static readonly Color GHOST_OFF = new Color(0f,    0f,    0f,    0.35f);
+    static readonly Color GHOST_ON  = new Color(0.8f,  0.85f, 1f,    0.55f);
+
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
     void Awake()
@@ -109,13 +121,45 @@ public class TouchControlsOverlay : MonoBehaviour
             bg: new Color(0f, 0f, 0f, 0.35f),
             onDown: () => PauseManager.Instance?.TogglePause(),
             onUp:   () => { });
+
+        // ── Fly mode toggle (top-left, next to pause) ──────────────────────
+        _flyBtnImg = MakeBtn(cgo.transform, "✈", "Fly",
+            anchorMin: new Vector2(0, 1), anchorMax: new Vector2(0, 1),
+            size: new Vector2(96, 60),
+            pos: new Vector2(55, -38),
+            bg: FLY_OFF,
+            onDown: () =>
+            {
+                _flyActive = !_flyActive;
+                if (_flyActive && _ghostActive) { _ghostActive = false; if (_ghostBtnImg) _ghostBtnImg.color = GHOST_OFF; }
+                var pcs = UnityEngine.Object.FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+                foreach (var pc in pcs) { if (pc.canControl) { pc.ToggleFlyMode(); break; } }
+                if (_flyBtnImg != null) _flyBtnImg.color = _flyActive ? FLY_ON : FLY_OFF;
+            },
+            onUp: () => { });
+
+        // ── Ghost mode toggle (top-left, next to fly) ─────────────────────
+        _ghostBtnImg = MakeBtn(cgo.transform, "👻", "Ghost",
+            anchorMin: new Vector2(0, 1), anchorMax: new Vector2(0, 1),
+            size: new Vector2(96, 60),
+            pos: new Vector2(160, -38),
+            bg: GHOST_OFF,
+            onDown: () =>
+            {
+                _ghostActive = !_ghostActive;
+                if (_ghostActive && _flyActive) { _flyActive = false; if (_flyBtnImg) _flyBtnImg.color = FLY_OFF; }
+                var pcs = UnityEngine.Object.FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+                foreach (var pc in pcs) { if (pc.canControl) { pc.ToggleGhostMode(); break; } }
+                if (_ghostBtnImg != null) _ghostBtnImg.color = _ghostActive ? GHOST_ON : GHOST_OFF;
+            },
+            onUp: () => { });
     }
 
-    void MakeBtn(Transform parent, string icon, string objName,
-                 Vector2 anchorMin, Vector2 anchorMax,
-                 Vector2 size, Vector2 pos,
-                 Color bg,
-                 System.Action onDown, System.Action onUp)
+    Image MakeBtn(Transform parent, string icon, string objName,
+                  Vector2 anchorMin, Vector2 anchorMax,
+                  Vector2 size, Vector2 pos,
+                  Color bg,
+                  System.Action onDown, System.Action onUp)
     {
         var go = new GameObject("TC_" + objName);
         go.transform.SetParent(parent, false);
@@ -159,5 +203,6 @@ public class TouchControlsOverlay : MonoBehaviour
         trt.anchorMin = Vector2.zero;
         trt.anchorMax = Vector2.one;
         trt.offsetMin = trt.offsetMax = Vector2.zero;
+        return img;
     }
 }

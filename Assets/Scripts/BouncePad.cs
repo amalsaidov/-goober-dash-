@@ -13,22 +13,17 @@ public class BouncePad : MonoBehaviour
         originalScale = transform.localScale;
     }
 
-    void OnCollisionEnter2D(Collision2D col)
+    // Trigger-based: bounce pad is non-solid so players never snag on its edges.
+    // Velocity check replaces contact-normal check — only bounce when approaching
+    // from the side or above (vy ≤ 0.5), not when jumping up through it.
+    void OnTriggerEnter2D(Collider2D other)
     {
-        Rigidbody2D rb = col.gameObject.GetComponent<Rigidbody2D>();
+        Rigidbody2D rb = other.GetComponent<Rigidbody2D>();
         if (rb == null) return;
-
-        // Only bounce from above
-        foreach (var c in col.contacts)
-        {
-            if (c.normal.y < -0.5f)
-            {
-                rb.linearVelocity = new Vector2(rb.linearVelocity.x, bounceForce);
-                CameraFollow.Instance?.Shake(0.4f, 0.18f);
-                StartCoroutine(SquashAnim());
-                return;
-            }
-        }
+        if (rb.linearVelocity.y > 0.5f) return; // jumping up through pad — ignore
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, bounceForce);
+        CameraFollow.Instance?.Shake(0.08f, 0.12f);
+        StartCoroutine(SquashAnim());
     }
 
     System.Collections.IEnumerator SquashAnim()
