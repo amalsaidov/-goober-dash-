@@ -1063,6 +1063,10 @@ public class SceneSetup : Editor
         ui.lobbyPanel = BuildLobbyPanel(cgo.transform);
         ui.lobbyPanel.SetActive(false);
 
+        // ── Map Constructor panel ────────────────────────────────
+        ui.constructorPanel = BuildConstructorPanel(cgo.transform);
+        ui.constructorPanel.SetActive(false);
+
         // ── Spectator overlay ────────────────────────────────────
         {
             var specMgrGO = new GameObject("SpectatorController");
@@ -1429,6 +1433,10 @@ public class SceneSetup : Editor
                       MenuButton.Action.Settings, UI_ACCENT,
                       new Vector2(0,-90), new Vector2(540,90));
 
+        MakeAccentBtn(panel.transform,"MM_Construct","\u270f  C O N S T R U C T",
+                      MenuButton.Action.Construct, new Color(0.85f,0.78f,0.18f,1f),
+                      new Vector2(0,-200), new Vector2(540,90));
+
         // Bottom accent line
         UIHLine(panel.transform, new Vector2(0.5f,0f), new Vector2(0,1),
                 new Vector2(1920,1), new Color(UI_ACCENT.r,UI_ACCENT.g,UI_ACCENT.b,0.12f));
@@ -1702,6 +1710,179 @@ public class SceneSetup : Editor
                       new Vector2(0,-106), new Vector2(430,76));
 
         return panel;
+    }
+
+    // ── Map Constructor Panel ──────────────────────────────────
+    static GameObject BuildConstructorPanel(Transform canvasRoot)
+    {
+        const float TB_H  = 56f;   // toolbar height
+        const float PAL_W = 148f;  // palette width
+        const float SB_H  = 30f;   // status bar height
+
+        // Root — transparent so game world is visible through it
+        var root = new GameObject("ConstructorPanel");
+        root.transform.SetParent(canvasRoot, false);
+        var rootRt = root.AddComponent<RectTransform>();
+        rootRt.anchorMin = Vector2.zero;
+        rootRt.anchorMax = Vector2.one;
+        rootRt.offsetMin = rootRt.offsetMax = Vector2.zero;
+        root.AddComponent<CanvasGroup>();  // needed to catch raycasts
+
+        var bg = UI_BG_DEEP;
+
+        // ── TOOLBAR (top strip) ─────────────────────────────────────────────
+        var toolbar = Pan(root.transform, "CON_Toolbar",
+                          new Color(bg.r, bg.g, bg.b, 0.94f),
+                          new Vector2(0f, 1f), new Vector2(1f, 1f));
+        var tbRt = toolbar.GetComponent<RectTransform>();
+        tbRt.offsetMin = new Vector2(0, -TB_H);
+        tbRt.offsetMax = Vector2.zero;
+
+        // Accent stripe under toolbar
+        var tbLine = Pan(toolbar.transform, "CON_TbLine",
+                         new Color(UI_ACCENT.r, UI_ACCENT.g, UI_ACCENT.b, 0.55f),
+                         new Vector2(0f, 0f), new Vector2(1f, 0f));
+        tbLine.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 2);
+
+        float btnX = 14f;
+        Button MakeTbBtn(string bname, string label, Color col)
+        {
+            var bgo  = new GameObject(bname);
+            bgo.transform.SetParent(toolbar.transform, false);
+            var bImg = bgo.AddComponent<Image>();
+            bImg.color = new Color(col.r * 0.38f, col.g * 0.38f, col.b * 0.38f, 1f);
+            var bBtn = bgo.AddComponent<Button>();
+            bBtn.targetGraphic = bImg;
+            var bc = bBtn.colors;
+            bc.normalColor      = new Color(col.r * 0.38f, col.g * 0.38f, col.b * 0.38f, 1f);
+            bc.highlightedColor = col;
+            bc.pressedColor     = new Color(col.r * 0.6f,  col.g * 0.6f,  col.b * 0.6f,  1f);
+            bBtn.colors = bc;
+            var bRt = bgo.GetComponent<RectTransform>();
+            bRt.anchorMin = bRt.anchorMax = bRt.pivot = new Vector2(0f, 0.5f);
+            bRt.anchoredPosition = new Vector2(btnX, 0);
+            bRt.sizeDelta = new Vector2(116, 40);
+            T(bgo.transform, bname + "_T", label,
+              new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(112, 36),
+              17, TextAnchor.MiddleCenter).color = UI_TEXT_PRI;
+            btnX += 122f;
+            return bBtn;
+        }
+
+        var backBtn  = MakeTbBtn("CON_Back",  "\u2190 BACK",  UI_RED);
+        var saveBtn  = MakeTbBtn("CON_Save",  "\u25cf SAVE",  UI_GOLD);
+        var loadBtn  = MakeTbBtn("CON_Load",  "\u2b07 LOAD",  UI_ACCENT);
+        var clearBtn = MakeTbBtn("CON_Clear", "\u2716 CLEAR", UI_ORANGE);
+        var testBtn  = MakeTbBtn("CON_Test",  "\u25b6 TEST",  UI_GREEN);
+
+        // Mode label (right side)
+        var modeT = T(toolbar.transform, "CON_Mode", "\u270f PLACE  [Floor]",
+                      new Vector2(1f, 0.5f), new Vector2(-14f, 0), new Vector2(440, 40),
+                      19, TextAnchor.MiddleRight);
+        modeT.color = UI_TEXT_PRI;
+
+        // ── PALETTE (left strip) ────────────────────────────────────────────
+        var palette = Pan(root.transform, "CON_Palette",
+                          new Color(bg.r, bg.g, bg.b, 0.94f),
+                          new Vector2(0f, 0f), new Vector2(0f, 1f));
+        var plRt = palette.GetComponent<RectTransform>();
+        plRt.offsetMin = new Vector2(0, SB_H);
+        plRt.offsetMax = new Vector2(PAL_W, -TB_H);
+
+        // Right accent line on palette
+        var plLine = Pan(palette.transform, "CON_PlLine",
+                         new Color(UI_ACCENT.r, UI_ACCENT.g, UI_ACCENT.b, 0.28f),
+                         new Vector2(1f, 0f), new Vector2(1f, 1f));
+        plLine.GetComponent<RectTransform>().sizeDelta = new Vector2(2, 0);
+
+        // Header
+        var plHdr = T(palette.transform, "CON_PlHdr", "B L O C K S",
+                      new Vector2(0.5f, 1f), new Vector2(0, -5), new Vector2(PAL_W - 8, 22),
+                      13, TextAnchor.UpperCenter);
+        plHdr.color = UI_TEXT_DIM;
+
+        float pY = -34f;
+        Button MakePBtn(string bname, string lbl, Color col)
+        {
+            var bgo  = new GameObject(bname);
+            bgo.transform.SetParent(palette.transform, false);
+            var bImg = bgo.AddComponent<Image>();
+            bImg.color = new Color(col.r * 0.28f, col.g * 0.28f, col.b * 0.28f, 1f);
+            var bBtn = bgo.AddComponent<Button>();
+            bBtn.targetGraphic = bImg;
+            var bc = bBtn.colors;
+            bc.normalColor      = new Color(col.r * 0.28f, col.g * 0.28f, col.b * 0.28f, 1f);
+            bc.highlightedColor = new Color(col.r * 0.7f,  col.g * 0.7f,  col.b * 0.7f,  1f);
+            bc.pressedColor     = col;
+            bBtn.colors = bc;
+            var bRt = bgo.GetComponent<RectTransform>();
+            bRt.anchorMin = bRt.anchorMax = bRt.pivot = new Vector2(0.5f, 1f);
+            bRt.anchoredPosition = new Vector2(0, pY);
+            bRt.sizeDelta        = new Vector2(PAL_W - 10, 34);
+            T(bgo.transform, bname + "_T", lbl,
+              new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(PAL_W - 14, 30),
+              13, TextAnchor.MiddleCenter).color = UI_TEXT_PRI;
+            pY -= 38f;
+            return bBtn;
+        }
+
+        var eraseBtn  = MakePBtn("CON_PErase",  "\u274c  ERASE",       UI_RED);
+        pY -= 4f; // extra gap before block types
+        var floorBtn  = MakePBtn("CON_PFloor",  "Floor",              new Color(0.72f,0.72f,0.72f));
+        var platBtn   = MakePBtn("CON_PPlat",   "Platform",           new Color(0.60f,0.60f,0.60f));
+        var thinBtn   = MakePBtn("CON_PThin",   "Thin Plat",          new Color(0.50f,0.50f,0.50f));
+        var wallBtn   = MakePBtn("CON_PWall",   "Wall",               new Color(0.42f,0.42f,0.42f));
+        var bounceBtn = MakePBtn("CON_PBounce", "Bounce Pad",         new Color(1.00f,0.45f,0.08f));
+        var speedBtn  = MakePBtn("CON_PSpeed",  "Speed Pad",          new Color(0.08f,0.92f,0.38f));
+        var convLBtn  = MakePBtn("CON_PConvL",  "Conv \u2190",        new Color(0.20f,0.58f,1.00f));
+        var convRBtn  = MakePBtn("CON_PConvR",  "Conv \u2192",        new Color(0.20f,0.58f,1.00f));
+        var lgzBtn    = MakePBtn("CON_PLgz",    "Low Gravity",        new Color(0.55f,0.20f,0.85f));
+        var cpBtn     = MakePBtn("CON_PCp",     "Checkpoint",         new Color(1.00f,0.78f,0.08f));
+        var finBtn    = MakePBtn("CON_PFin",    "Finish Line",        new Color(0.10f,0.95f,0.52f));
+
+        // ── STATUS BAR (bottom strip) ───────────────────────────────────────
+        var statusBar = Pan(root.transform, "CON_Status",
+                            new Color(bg.r, bg.g, bg.b, 0.88f),
+                            new Vector2(0f, 0f), new Vector2(1f, 0f));
+        // offsetMin/offsetMax: bottom-left=(0,0), top-right=(0,SB_H) → full-width strip at bottom
+        var sbRt = statusBar.GetComponent<RectTransform>();
+        sbRt.offsetMin = Vector2.zero;
+        sbRt.offsetMax = new Vector2(0, SB_H);
+
+        var coordsT = T(statusBar.transform, "CON_Coords",
+                        "X: 0.0  Y: 0.0   blocks: 0",
+                        new Vector2(0f, 0.5f), new Vector2(PAL_W + 10, 0),
+                        new Vector2(900, SB_H), 14, TextAnchor.MiddleLeft);
+        coordsT.color = UI_TEXT_SEC;
+
+        // ── Wire MapConstructorController ───────────────────────────────────
+        var ctrlGO = new GameObject("MapConstructorCtrl");
+        ctrlGO.transform.SetParent(canvasRoot, false);
+        var ctrl = ctrlGO.AddComponent<MapConstructorController>();
+        ctrl.panel       = root;
+        ctrl.modeLabel   = modeT;
+        ctrl.coordsLabel = coordsT;
+
+        backBtn.onClick.AddListener(()  => ctrl.OnBackPressed());
+        saveBtn.onClick.AddListener(()  => ctrl.OnSavePressed());
+        loadBtn.onClick.AddListener(()  => ctrl.OnLoadPressed());
+        clearBtn.onClick.AddListener(() => ctrl.OnClearPressed());
+        testBtn.onClick.AddListener(()  => ctrl.OnTestPressed());
+        eraseBtn.onClick.AddListener(() => ctrl.ToggleErase());
+
+        floorBtn.onClick.AddListener(()  => ctrl.SelectBlock(0));
+        platBtn.onClick.AddListener(()   => ctrl.SelectBlock(1));
+        thinBtn.onClick.AddListener(()   => ctrl.SelectBlock(2));
+        wallBtn.onClick.AddListener(()   => ctrl.SelectBlock(3));
+        bounceBtn.onClick.AddListener(() => ctrl.SelectBlock(4));
+        speedBtn.onClick.AddListener(()  => ctrl.SelectBlock(5));
+        convLBtn.onClick.AddListener(()  => ctrl.SelectBlock(6));
+        convRBtn.onClick.AddListener(()  => ctrl.SelectBlock(7));
+        lgzBtn.onClick.AddListener(()    => ctrl.SelectBlock(8));
+        cpBtn.onClick.AddListener(()     => ctrl.SelectBlock(9));
+        finBtn.onClick.AddListener(()    => ctrl.SelectBlock(10));
+
+        return root;
     }
 
     // ── Lobby Panel ────────────────────────────────────────────

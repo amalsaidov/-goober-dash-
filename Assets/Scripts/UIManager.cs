@@ -42,6 +42,9 @@ public class UIManager : MonoBehaviour
     [Header("Lobby")]
     public GameObject lobbyPanel;
 
+    [Header("Map Constructor")]
+    public GameObject constructorPanel;
+
     protected virtual void Awake()
     {
         if (Instance == null) Instance = this;
@@ -206,6 +209,18 @@ public class UIManager : MonoBehaviour
     static readonly string[] suffixes = { "", "st", "nd", "rd", "th", "th", "th", "th", "th" };
     public virtual void ShowHUD() { }
     public virtual void HideHUD() { }
+
+    // ── Map Constructor ─────────────────────────────────────────────────────
+
+    public virtual void ShowConstructorPanel()
+    {
+        constructorPanel?.SetActive(true);
+    }
+
+    public virtual void HideConstructorPanel()
+    {
+        constructorPanel?.SetActive(false);
+    }
 
     // ── Map Select (overridden by UIToolkitManager) ────────────────────────
     public virtual void ShowMapSelectPanel() { }

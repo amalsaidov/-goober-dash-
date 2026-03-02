@@ -12,7 +12,9 @@ public class MenuButton : MonoBehaviour
         // Lobby
         LobbyHost, LobbyJoin, LobbyBack, LobbyStart, LobbyToggleBots,
         // Open lobby from main menu
-        Multiplayer
+        Multiplayer,
+        // Open map constructor
+        Construct
     }
 
     public Action action;
@@ -42,6 +44,11 @@ public class MenuButton : MonoBehaviour
             case Action.Multiplayer:
                 UIManager.Instance?.HideMainMenu();
                 UIManager.Instance?.ShowLobbyPanel();
+                break;
+            case Action.Construct:
+                UIManager.Instance?.HideMainMenu();
+                UIManager.Instance?.ShowConstructorPanel();
+                MapConstructorController.Instance?.Activate();
                 break;
         }
     }
